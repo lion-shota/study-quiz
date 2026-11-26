@@ -1,0 +1,2516 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>第6回〜第10回 都道府県クイズ（全100問）</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts: M PLUS Rounded 1c & Inter -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=M+PLUS+Rounded+1c:wght@400;500;700;800&display=swap" rel="stylesheet">
+    <!-- Canvas Confetti for celebrations -->
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+    <style>
+        body {
+            font-family: 'M PLUS Rounded 1c', 'Inter', sans-serif;
+            background-color: #f0f7ff;
+            background-image: radial-gradient(#dbeafe 1.5px, transparent 1.5px);
+            background-size: 20px 20px;
+            user-select: none;
+            -webkit-tap-highlight-color: transparent;
+        }
+        /* ルビが重ならず、かつ縦幅を取りすぎないコンパクト行間設定 */
+        ruby {
+            ruby-align: center;
+        }
+        rt {
+            font-size: 0.55em;
+            font-weight: 700;
+            color: #475569;
+            line-height: 1.0;
+        }
+        .ruby-question {
+            line-height: 1.85 !important;
+        }
+        .ruby-choice {
+            line-height: 1.75 !important;
+        }
+        .ruby-explanation {
+            line-height: 1.85 !important;
+        }
+        .ruby-ui {
+            line-height: 1.6 !important;
+        }
+        .quiz-card {
+            box-shadow: 0 6px 18px -4px rgba(59, 130, 246, 0.14), 0 4px 8px -4px rgba(59, 130, 246, 0.08);
+        }
+        .choice-btn {
+            transition: all 0.12s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .choice-btn:active:not(:disabled) {
+            transform: scale(0.985);
+        }
+        @keyframes popIn {
+            0% { transform: scale(0.92); opacity: 0; }
+            70% { transform: scale(1.02); opacity: 1; }
+            100% { transform: scale(1); opacity: 1; }
+        }
+        .animate-pop {
+            animation: popIn 0.22s ease-out forwards;
+        }
+    </style>
+</head>
+<body class="min-h-screen text-slate-800 flex flex-col justify-between pb-4">
+
+    <!-- 超コンパクト・ヘッダー＆操作バー（LINE内ブラウザ対応） -->
+    <header class="bg-white/95 backdrop-blur-md border-b border-blue-100 sticky top-0 z-30 shadow-2xs">
+        <div class="max-w-3xl mx-auto px-2 sm:px-4 py-1.5 sm:py-2.5">
+            <!-- 1段目：タイトル＋成績バッジを横並び1行に凝縮 -->
+            <div class="flex items-center justify-between gap-1.5">
+                <div class="flex items-center gap-1.5 min-w-0">
+                    <span class="text-lg sm:text-2xl shrink-0">🗾</span>
+                    <h1 class="text-xs sm:text-lg font-extrabold text-blue-700 tracking-tight truncate ruby-ui">
+                        <span class="inline-block bg-blue-600 text-white text-[10px] sm:text-xs px-1.5 py-0.5 rounded-md mr-1 align-middle">第6回〜第10回</span><ruby>都道府県<rt>とどうふけん</rt></ruby>クイズ
+                    </h1>
+                </div>
+                
+                <!-- 成績バッジ（コンパクト） -->
+                <div class="flex items-center gap-1 text-[11px] sm:text-xs font-extrabold shrink-0">
+                    <div class="bg-amber-50 border border-amber-200 text-amber-700 px-1.5 sm:px-2.5 py-0.5 rounded-full flex items-center gap-0.5" title="連続正解数">
+                        <span>🔥</span><span id="combo-count">0</span>
+                    </div>
+                    <div class="bg-emerald-50 border border-emerald-200 text-emerald-700 px-1.5 sm:px-2.5 py-0.5 rounded-full flex items-center gap-0.5" title="正答率">
+                        <span>🎯</span><span id="accuracy-rate">--%</span>
+                    </div>
+                    <div class="bg-blue-50 border border-blue-200 text-blue-700 px-1.5 sm:px-2.5 py-0.5 rounded-full flex items-center gap-0.5" title="解いた問題数">
+                        <span>📝</span><span id="total-answered">0</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 2段目：出題範囲プルダウン＋復習ボタンを横並び1行に配置 -->
+            <div class="mt-1.5 pt-1.5 border-t border-slate-100 flex items-center justify-between gap-1.5">
+                <select id="filter-select" aria-label="出題範囲" class="bg-slate-50 border border-slate-200 text-slate-700 text-[11px] sm:text-sm font-bold rounded-lg px-2 py-1 focus:outline-none focus:ring-2 focus:ring-blue-400 flex-1 min-w-0 cursor-pointer">
+                    <option value="ALL">🌟 すべてランダム（全100問）</option>
+                    <optgroup label="📚 回ごとにチャレンジ">
+                        <option value="ROUND_6">📘 第6回（山梨・静岡・埼玉）</option>
+                        <option value="ROUND_7">📘 第7回（東京・神奈川）</option>
+                        <option value="ROUND_8">📘 第8回（茨城・千葉）</option>
+                        <option value="ROUND_9">📘 第9回（栃木・群馬）</option>
+                        <option value="ROUND_10">📘 第10回（石川・福井）</option>
+                    </optgroup>
+                    <optgroup label="📍 都道府県ごとにチャレンジ">
+                        <option value="山梨県">🍇 山梨県（やまなしけん）</option>
+                        <option value="静岡県">🍵 静岡県（しずおかけん）</option>
+                        <option value="埼玉県">🚃 埼玉県（さいたまけん）</option>
+                        <option value="東京都">🗼 東京都（とうきょうと）</option>
+                        <option value="神奈川県">⚓ 神奈川県（かながわけん）</option>
+                        <option value="茨城県">🍈 茨城県（いばらきけん）</option>
+                        <option value="千葉県">🥜 千葉県（ちばけん）</option>
+                        <option value="栃木県">🍓 栃木県（とちぎけん）</option>
+                        <option value="群馬県">♨️ 群馬県（ぐんまけん）</option>
+                        <option value="石川県">✨ 石川県（いしかわけん）</option>
+                        <option value="福井県">🦖 福井県（ふくいけん）</option>
+                    </optgroup>
+                </select>
+
+                <!-- コンパクト復習モードボタン -->
+                <button id="review-mode-btn" onclick="toggleReviewMode()" class="text-[11px] sm:text-xs font-extrabold px-2.5 py-1 rounded-lg border transition-all flex items-center justify-center gap-1 bg-white border-rose-200 text-rose-600 hover:bg-rose-50 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer shrink-0">
+                    <span>💪</span>
+                    <span id="review-btn-text" class="ruby-ui"><ruby>復習<rt>ふくしゅう</rt></ruby>(0問)</span>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- メインクイズエリア（外枠余白を極限までスリム化） -->
+    <main class="max-w-3xl w-full mx-auto px-1.5 sm:px-4 mt-1.5 sm:mt-4 flex-1 flex flex-col">
+        
+        <!-- 復習モード通知バー -->
+        <div id="mode-banner" class="hidden mb-1.5 bg-rose-500 text-white text-[11px] sm:text-sm font-bold px-3 py-1.5 rounded-xl shadow-2xs flex items-center justify-between animate-pop">
+            <div class="flex items-center gap-1.5">
+                <span>🔥 にがて<ruby>復習<rt>ふくしゅう</rt></ruby>モード中</span>
+                <span id="review-remaining" class="bg-white/20 px-2 py-0.5 rounded-full text-[10px] sm:text-xs">のこり 0 問</span>
+            </div>
+            <button onclick="exitReviewMode()" class="underline hover:text-rose-100 text-[11px] sm:text-xs cursor-pointer">もどる</button>
+        </div>
+
+        <!-- クイズカード -->
+        <div class="bg-white rounded-2xl sm:rounded-3xl p-3 sm:p-6 quiz-card border border-blue-50 flex-1 flex flex-col justify-between">
+            <div>
+                <!-- 問題メタ情報（1行コンパクト） -->
+                <div class="flex items-center justify-between gap-1.5 mb-2 sm:mb-3">
+                    <div class="flex items-center gap-1 sm:gap-1.5 flex-wrap">
+                        <span id="q-round-badge" class="bg-indigo-100 text-indigo-700 text-[10px] sm:text-xs font-extrabold px-2 py-0.5 rounded-full">
+                            第6回
+                        </span>
+                        <span id="q-pref-badge" class="bg-blue-600 text-white text-[11px] sm:text-xs font-extrabold px-2.5 py-0.5 rounded-full">
+                            山梨県
+                        </span>
+                        <span id="q-category-badge" class="bg-sky-100 text-sky-700 text-[10px] sm:text-xs font-bold px-2 py-0.5 rounded-full">
+                            県庁所在地
+                        </span>
+                    </div>
+                    <span id="q-streak-badge" class="hidden text-[10px] sm:text-xs font-extrabold text-amber-600 bg-amber-100 px-2 py-0.5 rounded-full shrink-0">
+                        🔥 絶好調！
+                    </span>
+                </div>
+
+                <!-- 問題文（1画面に収まる適度な高さとサイズ） -->
+                <div class="min-h-[3.8rem] sm:min-h-[5.5rem] flex items-center mb-2.5 sm:mb-5">
+                    <h2 id="question-text" class="text-[15px] sm:text-xl font-extrabold text-slate-800 ruby-question">
+                        <ruby>問題<rt>もんだい</rt></ruby>を<ruby>読<rt>よ</rt></ruby>みこんでいます...
+                    </h2>
+                </div>
+
+                <!-- 4択ボタン一覧（縦幅を詰めたスリム設計） -->
+                <div id="choices-container" class="grid grid-cols-1 sm:grid-cols-2 gap-1.5 sm:gap-3">
+                    <!-- JSで動的に生成 -->
+                </div>
+            </div>
+
+            <!-- 判定＆解説エリア（回答後に表示） -->
+            <div id="feedback-area" class="hidden mt-3 sm:mt-5 pt-2.5 sm:pt-4 border-t-2 border-dashed border-slate-200 animate-pop">
+                <div id="result-header" class="flex items-center gap-2 mb-1.5">
+                    <span id="result-icon" class="text-2xl sm:text-3xl">⭕</span>
+                    <div>
+                        <p id="result-title" class="text-base sm:text-xl font-extrabold">せいかい！</p>
+                        <p id="correct-answer-sub" class="text-xs sm:text-sm font-bold text-slate-600 mt-0.5 hidden ruby-choice"></p>
+                    </div>
+                </div>
+
+                <!-- テキストの豆知識・解説ボックス -->
+                <div class="bg-amber-50/90 border border-amber-200 rounded-xl p-2.5 sm:p-3.5 mt-1.5">
+                    <div class="flex items-center gap-1 text-amber-800 font-extrabold text-[11px] sm:text-xs mb-1">
+                        <span>💡</span>
+                        <span>ポイント・<ruby>豆知識<rt>まめちしき</rt></ruby></span>
+                    </div>
+                    <p id="explanation-text" class="text-xs sm:text-sm text-slate-700 font-medium ruby-explanation">
+                        解説テキストがここに入ります。
+                    </p>
+                </div>
+
+                <!-- 次の問題へボタン -->
+                <button id="next-btn" onclick="nextQuestion()" class="mt-3 sm:mt-4 w-full bg-gradient-to-r from-blue-600 to-sky-500 hover:from-blue-700 hover:to-sky-600 text-white font-extrabold text-sm sm:text-base py-2.5 sm:py-3.5 px-4 rounded-xl shadow-md shadow-blue-500/25 transition-all flex items-center justify-center gap-1.5 cursor-pointer">
+                    <span>つぎの<ruby>問題<rt>もんだい</rt></ruby>へ</span>
+                    <span class="text-base sm:text-lg">➡️</span>
+                </button>
+            </div>
+        </div>
+    </main>
+
+    <!-- コンパクトフッター -->
+    <footer class="max-w-3xl w-full mx-auto px-2 sm:px-4 mt-2.5 flex items-center justify-between text-[10px] sm:text-xs text-slate-400">
+        <p class="hidden sm:block">⌨️ キーボード：[1]〜[4]で選択 / [Enter]でつぎへ</p>
+        <p class="sm:hidden">全20ページ・全100問収録</p>
+        <button onclick="resetStats()" class="hover:text-slate-600 underline cursor-pointer"><ruby>成績<rt>せいせき</rt></ruby>リセット</button>
+    </footer>
+
+    <!-- リセット確認用カスタムモーダル -->
+    <div id="reset-modal" class="hidden fixed inset-0 bg-slate-900/50 backdrop-blur-xs z-50 flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl p-5 max-w-xs w-full shadow-2xl animate-pop">
+            <h3 class="text-base font-extrabold text-slate-800 mb-1.5"><ruby>成績<rt>せいせき</rt></ruby>をリセットしますか？</h3>
+            <p class="text-xs text-slate-600 mb-4 leading-relaxed">これまでのせいかい数や<ruby>連続<rt>れんぞく</rt></ruby>きろく、まちがえた<ruby>問題<rt>もんだい</rt></ruby>リストがすべて0にもどります。</p>
+            <div class="flex gap-2.5">
+                <button onclick="closeResetModal()" class="flex-1 py-2 px-3 rounded-xl border border-slate-200 text-xs font-bold text-slate-600 hover:bg-slate-50 cursor-pointer">やめる</button>
+                <button onclick="confirmReset()" class="flex-1 py-2 px-3 rounded-xl bg-rose-500 text-xs font-bold text-white hover:bg-rose-600 cursor-pointer">リセット</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // ==========================================
+        // 第6回〜第10回 全20ページ（p.21〜p.40）完全準拠 問題データベース（全100問）
+        // ==========================================
+        const quizDatabase = [
+            // ==========================================
+            // 第6回：山梨県（10問）p.21, p.24
+            // ==========================================
+            {
+                id: "yamanashi_1",
+                round: "ROUND_6",
+                roundLabel: "第6回",
+                pref: "山梨県",
+                prefRuby: "<ruby>山梨県<rt>やまなしけん</rt></ruby>",
+                category: "<ruby>県庁所在地<rt>けんちょうしょざいち</rt></ruby>",
+                question: "<ruby>山梨県<rt>やまなしけん</rt></ruby>の<ruby>県庁所在地<rt>けんちょうしょざいち</rt></ruby>はどこでしょう？",
+                choices: [
+                    "<ruby>甲府市<rt>こうふし</rt></ruby>",
+                    "<ruby>山梨市<rt>やまなしし</rt></ruby>",
+                    "<ruby>富士吉田市<rt>ふじよしだし</rt></ruby>",
+                    "<ruby>甲州市<rt>こうしゅうし</rt></ruby>"
+                ],
+                answerIndex: 0,
+                explanation: "<ruby>山梨県<rt>やまなしけん</rt></ruby>の<ruby>県庁所在地<rt>けんちょうしょざいち</rt></ruby>は「<ruby>甲府市<rt>こうふし</rt></ruby>」です。<ruby>甲府盆地<rt>こうふぼんち</rt></ruby>の中心にあります。"
+            },
+            {
+                id: "yamanashi_2",
+                round: "ROUND_6",
+                roundLabel: "第6回",
+                pref: "山梨県",
+                prefRuby: "<ruby>山梨県<rt>やまなしけん</rt></ruby>",
+                category: "<ruby>地形<rt>ちけい</rt></ruby>・<ruby>農業<rt>のうぎょう</rt></ruby>",
+                question: "<ruby>甲府盆地<rt>こうふぼんち</rt></ruby>に広がる、川が山から平地に出るところにつくる<ruby>扇<rt>おうぎ</rt></ruby>の形の地形で、ぶどうやももの<ruby>栽培<rt>さいばい</rt></ruby>がさかんな場所を何というでしょう？",
+                choices: [
+                    "<ruby>扇状地<rt>せんじょうち</rt></ruby>",
+                    "<ruby>三角州<rt>さんかくす</rt></ruby>",
+                    "<ruby>台地<rt>だいち</rt></ruby>",
+                    "リアス<ruby>海岸<rt>かいがん</rt></ruby>"
+                ],
+                answerIndex: 0,
+                explanation: "<ruby>扇状地<rt>せんじょうち</rt></ruby>は水はけがよく日当たりのよい<ruby>斜面<rt>しゃめん</rt></ruby>のため、<ruby>果樹園<rt>かじゅえん</rt></ruby>が多く、ぶどう・ももの<ruby>栽培<rt>さいばい</rt></ruby>やワインづくりがさかんです。"
+            },
+            {
+                id: "yamanashi_3",
+                round: "ROUND_6",
+                roundLabel: "第6回",
+                pref: "山梨県",
+                prefRuby: "<ruby>山梨県<rt>やまなしけん</rt></ruby>",
+                category: "<ruby>地形<rt>ちけい</rt></ruby>・<ruby>自然<rt>しぜん</rt></ruby>",
+                question: "<ruby>山梨県<rt>やまなしけん</rt></ruby>と<ruby>静岡県<rt>しずおかけん</rt></ruby>にまたがる、日本で最も<ruby>標高<rt>ひょうこう</rt></ruby>が高い山（3776m）はどれでしょう？",
+                choices: [
+                    "<ruby>富士山<rt>ふじさん</rt></ruby>",
+                    "<ruby>北岳<rt>きただけ</rt></ruby>",
+                    "<ruby>八ヶ岳<rt>やつがたけ</rt></ruby>",
+                    "<ruby>雲取山<rt>くもとりやま</rt></ruby>"
+                ],
+                answerIndex: 0,
+                explanation: "<ruby>富士山<rt>ふじさん</rt></ruby>は<ruby>標高<rt>ひょうこう</rt></ruby>3776mで日本一高い山です。"
+            },
+            {
+                id: "yamanashi_4",
+                round: "ROUND_6",
+                roundLabel: "第6回",
+                pref: "山梨県",
+                prefRuby: "<ruby>山梨県<rt>やまなしけん</rt></ruby>",
+                category: "<ruby>地形<rt>ちけい</rt></ruby>・<ruby>自然<rt>しぜん</rt></ruby>",
+                question: "<ruby>南<rt>みなみ</rt></ruby>アルプス（<ruby>赤石山脈<rt>あかいしさんみゃく</rt></ruby>）にある、日本で2番目に<ruby>標高<rt>ひょうこう</rt></ruby>が高い山（3193m）はどれでしょう？",
+                choices: [
+                    "<ruby>北岳<rt>きただけ</rt></ruby>",
+                    "<ruby>浅間山<rt>あさまやま</rt></ruby>",
+                    "<ruby>男体山<rt>なんたいさん</rt></ruby>",
+                    "<ruby>白山<rt>はくさん</rt></ruby>"
+                ],
+                answerIndex: 0,
+                explanation: "<ruby>北岳<rt>きただけ</rt></ruby>（3193m）は<ruby>富士山<rt>ふじさん</rt></ruby>についで日本で2番目に高い山です。ふもとの「<ruby>南<rt>みなみ</rt></ruby>アルプス<ruby>市<rt>し</rt></ruby>」は日本で<ruby>唯一<rt>ゆいいつ</rt></ruby>カタカナがつく市です。"
+            },
+            {
+                id: "yamanashi_5",
+                round: "ROUND_6",
+                roundLabel: "第6回",
+                pref: "山梨県",
+                prefRuby: "<ruby>山梨県<rt>やまなしけん</rt></ruby>",
+                category: "<ruby>地形<rt>ちけい</rt></ruby>・<ruby>自然<rt>しぜん</rt></ruby>",
+                question: "<ruby>富士山<rt>ふじさん</rt></ruby>の<ruby>噴火<rt>ふんか</rt></ruby>によって<ruby>溶岩<rt>ようがん</rt></ruby>などで川がせき止められてできた5つの湖「<ruby>富士五湖<rt>ふじごこ</rt></ruby>」の正しい組み合わせはどれでしょう？",
+                choices: [
+                    "<ruby>本栖湖<rt>もとすこ</rt></ruby>・<ruby>精進湖<rt>しょうじこ</rt></ruby>・<ruby>西湖<rt>さいこ</rt></ruby>・<ruby>河口湖<rt>かわぐちこ</rt></ruby>・<ruby>山中湖<rt>やまなかこ</rt></ruby>",
+                    "<ruby>琵琶湖<rt>びわこ</rt></ruby>・<ruby>霞ヶ浦<rt>かすみがうら</rt></ruby>・<ruby>浜名湖<rt>はまなこ</rt></ruby>・<ruby>芦ノ湖<rt>あしのこ</rt></ruby>・<ruby>相模湖<rt>さがみこ</rt></ruby>",
+                    "<ruby>中禅寺湖<rt>ちゅうぜんじこ</rt></ruby>・<ruby>奥多摩湖<rt>おくたまこ</rt></ruby>・<ruby>諏訪湖<rt>すわこ</rt></ruby>・<ruby>野尻湖<rt>のじりこ</rt></ruby>・<ruby>印旛沼<rt>いんばぬま</rt></ruby>",
+                    "<ruby>十和田湖<rt>とわだこ</rt></ruby>・<ruby>田沢湖<rt>たざわこ</rt></ruby>・<ruby>猪苗代湖<rt>いなわしろこ</rt></ruby>・<ruby>サロマ湖<rt>サロマこ</rt></ruby>・<ruby>洞爺湖<rt>とうやこ</rt></ruby>"
+                ],
+                answerIndex: 0,
+                explanation: "<ruby>富士五湖<rt>ふじごこ</rt></ruby>は<ruby>本栖湖<rt>もとすこ</rt></ruby>・<ruby>精進湖<rt>しょうじこ</rt></ruby>・<ruby>西湖<rt>さいこ</rt></ruby>・<ruby>河口湖<rt>かわぐちこ</rt></ruby>・<ruby>山中湖<rt>やまなかこ</rt></ruby>の5つです。"
+            },
+            {
+                id: "yamanashi_6",
+                round: "ROUND_6",
+                roundLabel: "第6回",
+                pref: "山梨県",
+                prefRuby: "<ruby>山梨県<rt>やまなしけん</rt></ruby>",
+                category: "<ruby>地形<rt>ちけい</rt></ruby>・<ruby>自然<rt>しぜん</rt></ruby>",
+                question: "<ruby>山梨県<rt>やまなしけん</rt></ruby>を流れ、<ruby>駿河湾<rt>するがわん</rt></ruby>に<ruby>注<rt>そそ</rt></ruby>ぐ「<ruby>日本三大急流<rt>にほんさんだいきゅうりゅう</rt></ruby>」の1つである川はどれでしょう？",
+                choices: [
+                    "<ruby>富士川<rt>ふじかわ</rt></ruby>",
+                    "<ruby>多摩川<rt>たまがわ</rt></ruby>",
+                    "<ruby>利根川<rt>とねがわ</rt></ruby>",
+                    "<ruby>荒川<rt>あらかわ</rt></ruby>"
+                ],
+                answerIndex: 0,
+                explanation: "<ruby>富士川<rt>ふじかわ</rt></ruby>は流れがとても速く、<ruby>最上川<rt>もがみがわ</rt></ruby>・<ruby>球磨川<rt>くまがわ</rt></ruby>とならぶ「<ruby>日本三大急流<rt>にほんさんだいきゅうりゅう</rt></ruby>」の1つです。"
+            },
+            {
+                id: "yamanashi_7",
+                round: "ROUND_6",
+                roundLabel: "第6回",
+                pref: "山梨県",
+                prefRuby: "<ruby>山梨県<rt>やまなしけん</rt></ruby>",
+                category: "<ruby>産業<rt>さんぎょう</rt></ruby>・<ruby>工芸<rt>こうげい</rt></ruby>",
+                question: "<ruby>江戸時代<rt>えどじだい</rt></ruby>の後半に<ruby>京都<rt>きょうと</rt></ruby>の<ruby>職人<rt>しょくにん</rt></ruby>によって加工の技術がもたらされ、現在は<ruby>宝石<rt>ほうせき</rt></ruby>の加工もさかんな<ruby>山梨県<rt>やまなしけん</rt></ruby>の伝統工芸は何でしょう？",
+                choices: [
+                    "<ruby>水晶細工<rt>すいしょうざいく</rt></ruby>",
+                    "<ruby>箱根寄木細工<rt>はこねよせぎざいく</rt></ruby>",
+                    "<ruby>輪島塗<rt>わじまぬり</rt></ruby>",
+                    "<ruby>金箔<rt>きんぱく</rt></ruby>"
+                ],
+                answerIndex: 0,
+                explanation: "<ruby>山梨県<rt>やまなしけん</rt></ruby>は<ruby>水晶<rt>すいしょう</rt></ruby>の産地として有名で、<ruby>水晶細工<rt>すいしょうざいく</rt></ruby>や<ruby>宝石<rt>ほうせき</rt></ruby>の加工技術が発展しました。"
+            },
+            {
+                id: "yamanashi_8",
+                round: "ROUND_6",
+                roundLabel: "第6回",
+                pref: "山梨県",
+                prefRuby: "<ruby>山梨県<rt>やまなしけん</rt></ruby>",
+                category: "<ruby>食文化<rt>しょくぶんか</rt></ruby>・<ruby>名産<rt>めいさん</rt></ruby>",
+                question: "かぼちゃやきのこなどのたくさんの<ruby>具<rt>ぐ</rt></ruby>を、太くて平べったいめんといっしょにみそで<ruby>煮込<rt>にこ</rt></ruby>んだ<ruby>山梨県<rt>やまなしけん</rt></ruby>の<ruby>郷土料理<rt>きょうどりょうり</rt></ruby>は何でしょう？",
+                choices: [
+                    "ほうとう",
+                    "あんこう<ruby>鍋<rt>なべ</rt></ruby>",
+                    "かんぴょう巻き",
+                    "ぎょうざ"
+                ],
+                answerIndex: 0,
+                explanation: "「ほうとう」は<ruby>山梨県<rt>やまなしけん</rt></ruby>を代表する<ruby>郷土料理<rt>きょうどりょうり</rt></ruby>です。ぶどうの産地としてワインづくりもさかんです。"
+            },
+            {
+                id: "yamanashi_9",
+                round: "ROUND_6",
+                roundLabel: "第6回",
+                pref: "山梨県",
+                prefRuby: "<ruby>山梨県<rt>やまなしけん</rt></ruby>",
+                category: "<ruby>産業<rt>さんぎょう</rt></ruby>・<ruby>名産<rt>めいさん</rt></ruby>",
+                question: "豊かな自然ときれいな水にめぐまれた<ruby>山梨県<rt>やまなしけん</rt></ruby>が、<ruby>生産額<rt>せいさんがく</rt></ruby>日本一をほこる飲み物は何でしょう？",
+                choices: [
+                    "ミネラルウォーター",
+                    "<ruby>緑茶<rt>りょくちゃ</rt></ruby>",
+                    "<ruby>牛乳<rt>ぎゅうにゅう</rt></ruby>",
+                    "りんごジュース"
+                ],
+                answerIndex: 0,
+                explanation: "<ruby>山梨県<rt>やまなしけん</rt></ruby>はミネラルウォーターの<ruby>生産額<rt>せいさんがく</rt></ruby>が日本一です。"
+            },
+            {
+                id: "yamanashi_10",
+                round: "ROUND_6",
+                roundLabel: "第6回",
+                pref: "山梨県",
+                prefRuby: "<ruby>山梨県<rt>やまなしけん</rt></ruby>",
+                category: "<ruby>都道府県図<rt>とどうふけんず</rt></ruby>かん",
+                question: "<ruby>山梨県<rt>やまなしけん</rt></ruby>の「<ruby>県の花<rt>けんのはな</rt></ruby>」であり、マメザクラの別名をもつ花は何でしょう？",
+                choices: [
+                    "フジザクラ",
+                    "ソメイヨシノ",
+                    "サクラソウ",
+                    "ヤマユリ"
+                ],
+                answerIndex: 0,
+                explanation: "<ruby>山梨県<rt>やまなしけん</rt></ruby>の<ruby>県の花<rt>けんのはな</rt></ruby>は「フジザクラ」です。<ruby>県章<rt>けんしょう</rt></ruby>は「人」の文字が3つならんで「山」の形をつくり、まわりは<ruby>富士山<rt>ふじさん</rt></ruby>を表しています。"
+            },
+
+            // ==========================================
+            // 第6回：静岡県（10問）p.22, p.24
+            // ==========================================
+            {
+                id: "shizuoka_1",
+                round: "ROUND_6",
+                roundLabel: "第6回",
+                pref: "静岡県",
+                prefRuby: "<ruby>静岡県<rt>しずおかけん</rt></ruby>",
+                category: "<ruby>県庁所在地<rt>けんちょうしょざいち</rt></ruby>・<ruby>人口<rt>じんこう</rt></ruby>",
+                question: "<ruby>静岡県<rt>しずおかけん</rt></ruby>の<ruby>県庁所在地<rt>けんちょうしょざいち</rt></ruby>は<ruby>静岡市<rt>しずおかし</rt></ruby>ですが、県内で最も<ruby>人口<rt>じんこう</rt></ruby>が多い市はどこでしょう？",
+                choices: [
+                    "<ruby>浜松市<rt>はままつし</rt></ruby>",
+                    "<ruby>富士市<rt>ふじし</rt></ruby>",
+                    "<ruby>焼津市<rt>やいづし</rt></ruby>",
+                    "<ruby>熱海市<rt>あたみし</rt></ruby>"
+                ],
+                answerIndex: 0,
+                explanation: "<ruby>県庁所在地<rt>けんちょうしょざいち</rt></ruby>の<ruby>静岡市<rt>しずおかし</rt></ruby>よりも、<ruby>浜松市<rt>はままつし</rt></ruby>の方が<ruby>人口<rt>じんこう</rt></ruby>が多いです。"
+            },
+            {
+                id: "shizuoka_2",
+                round: "ROUND_6",
+                roundLabel: "第6回",
+                pref: "静岡県",
+                prefRuby: "<ruby>静岡県<rt>しずおかけん</rt></ruby>",
+                category: "<ruby>産業<rt>さんぎょう</rt></ruby>・<ruby>名産<rt>めいさん</rt></ruby>",
+                question: "<ruby>浜松市<rt>はままつし</rt></ruby>が全国的に有名な産業・まちの特徴はどれでしょう？",
+                choices: [
+                    "<ruby>楽器<rt>がっき</rt></ruby>（ピアノなど）・オートバイのまち",
+                    "めがねフレームのまち",
+                    "おもちゃのまち",
+                    "<ruby>鋳物<rt>いもの</rt></ruby>のまち"
+                ],
+                answerIndex: 0,
+                explanation: "<ruby>浜松市<rt>はままつし</rt></ruby>はピアノなどの<ruby>楽器<rt>がっき</rt></ruby>やオートバイのまちとして有名で、ぎょうざも人気です。"
+            },
+            {
+                id: "shizuoka_3",
+                round: "ROUND_6",
+                roundLabel: "第6回",
+                pref: "静岡県",
+                prefRuby: "<ruby>静岡県<rt>しずおかけん</rt></ruby>",
+                category: "<ruby>農業<rt>のうぎょう</rt></ruby>・<ruby>地形<rt>ちけい</rt></ruby>",
+                question: "日本一のお茶の産地である<ruby>静岡県<rt>しずおかけん</rt></ruby>で、一面に<ruby>茶畑<rt>ちゃばたけ</rt></ruby>が広がる日当たりと水はけのよい<ruby>台地<rt>だいち</rt></ruby>はどこでしょう？",
+                choices: [
+                    "<ruby>牧之原<rt>まきのはら</rt></ruby>",
+                    "<ruby>下総台地<rt>しもうさだいち</rt></ruby>",
+                    "<ruby>那須野ヶ原<rt>なすのがはら</rt></ruby>",
+                    "<ruby>甲府盆地<rt>こうふぼんち</rt></ruby>"
+                ],
+                answerIndex: 0,
+                explanation: "まわりの土地よりも高くなった平らな土地を「<ruby>台地<rt>だいち</rt></ruby>」といい、<ruby>牧之原<rt>まきのはら</rt></ruby>ではお茶の<ruby>栽培<rt>さいばい</rt></ruby>がとてもさかんです。"
+            },
+            {
+                id: "shizuoka_4",
+                round: "ROUND_6",
+                roundLabel: "第6回",
+                pref: "静岡県",
+                prefRuby: "<ruby>静岡県<rt>しずおかけん</rt></ruby>",
+                category: "<ruby>地形<rt>ちけい</rt></ruby>・<ruby>観光<rt>かんこう</rt></ruby>",
+                question: "<ruby>駿河湾<rt>するがわん</rt></ruby>ぞいにおよそ7kmにわたって<ruby>松林<rt>まつばやし</rt></ruby>が続き、昔の<ruby>和歌<rt>わか</rt></ruby>にも登場する<ruby>静岡県<rt>しずおかけん</rt></ruby>の景勝地はどこでしょう？",
+                choices: [
+                    "<ruby>三保の松原<rt>みほのまつばら</rt></ruby>",
+                    "<ruby>九十九里浜<rt>くじゅうくりはま</rt></ruby>",
+                    "<ruby>東尋坊<rt>とうじんぼう</rt></ruby>",
+                    "<ruby>白米千枚田<rt>しろよねせんまいだ</rt></ruby>"
+                ],
+                answerIndex: 0,
+                explanation: "<ruby>三保の松原<rt>みほのまつばら</rt></ruby>は<ruby>駿河湾<rt>するがわん</rt></ruby>ぞいに約7km続く美しい<ruby>松林<rt>まつばやし</rt></ruby>です。"
+            },
+            {
+                id: "shizuoka_5",
+                round: "ROUND_6",
+                roundLabel: "第6回",
+                pref: "静岡県",
+                prefRuby: "<ruby>静岡県<rt>しずおかけん</rt></ruby>",
+                category: "<ruby>漁業<rt>ぎょぎょう</rt></ruby>・<ruby>自然<rt>しぜん</rt></ruby>",
+                question: "<ruby>静岡県<rt>しずおかけん</rt></ruby>西部にある、日本の「うなぎ<ruby>養殖<rt>ようしょく</rt></ruby>」の<ruby>発祥地<rt>はっしょうち</rt></ruby>として知られる湖はどこでしょう？",
+                choices: [
+                    "<ruby>浜名湖<rt>はまなこ</rt></ruby>",
+                    "<ruby>霞ヶ浦<rt>かすみがうら</rt></ruby>",
+                    "<ruby>中禅寺湖<rt>ちゅうぜんじこ</rt></ruby>",
+                    "<ruby>芦ノ湖<rt>あしのこ</rt></ruby>"
+                ],
+                answerIndex: 0,
+                explanation: "<ruby>浜名湖<rt>はまなこ</rt></ruby>はうなぎの<ruby>養殖<rt>ようしょく</rt></ruby>で有名です。"
+            },
+            {
+                id: "shizuoka_6",
+                round: "ROUND_6",
+                roundLabel: "第6回",
+                pref: "静岡県",
+                prefRuby: "<ruby>静岡県<rt>しずおかけん</rt></ruby>",
+                category: "<ruby>漁業<rt>ぎょぎょう</rt></ruby>",
+                question: "<ruby>駿河湾<rt>するがわん</rt></ruby>に面しており、まぐろやかつおなどがたくさん<ruby>水揚<rt>みずあ</rt></ruby>げされる<ruby>静岡県<rt>しずおかけん</rt></ruby>の漁港はどこでしょう？",
+                choices: [
+                    "<ruby>焼津港<rt>やいづこう</rt></ruby>",
+                    "<ruby>銚子港<rt>ちょうしこう</rt></ruby>",
+                    "<ruby>三崎港<rt>みさきこう</rt></ruby>",
+                    "<ruby>鹿島港<rt>かしまこう</rt></ruby>"
+                ],
+                answerIndex: 0,
+                explanation: "<ruby>焼津港<rt>やいづこう</rt></ruby>はまぐろやかつおの<ruby>水揚<rt>みずあ</rt></ruby>げがさかんな漁港です。"
+            },
+            {
+                id: "shizuoka_7",
+                round: "ROUND_6",
+                roundLabel: "第6回",
+                pref: "静岡県",
+                prefRuby: "<ruby>静岡県<rt>しずおかけん</rt></ruby>",
+                category: "<ruby>産業<rt>さんぎょう</rt></ruby>",
+                question: "<ruby>富士山<rt>ふじさん</rt></ruby>のわき水などにめぐまれ、古くから「<ruby>紙<rt>かみ</rt></ruby>づくり」がさかんで、<ruby>静岡県<rt>しずおかけん</rt></ruby>が日本一の生産量をほこるきっかけとなった市はどこでしょう？",
+                choices: [
+                    "<ruby>富士市<rt>ふじし</rt></ruby>",
+                    "<ruby>静岡市<rt>しずおかし</rt></ruby>",
+                    "<ruby>浜松市<rt>はままつし</rt></ruby>",
+                    "<ruby>熱海市<rt>あたみし</rt></ruby>"
+                ],
+                answerIndex: 0,
+                explanation: "<ruby>富士市<rt>ふじし</rt></ruby>では<ruby>富士山<rt>ふじさん</rt></ruby>のわき水を利用した<ruby>紙<rt>かみ</rt></ruby>づくりがさかんで、<ruby>静岡県<rt>しずおかけん</rt></ruby>は日本一<ruby>紙<rt>かみ</rt></ruby>がつくられている県です。"
+            },
+            {
+                id: "shizuoka_8",
+                round: "ROUND_6",
+                roundLabel: "第6回",
+                pref: "静岡県",
+                prefRuby: "<ruby>静岡県<rt>しずおかけん</rt></ruby>",
+                category: "<ruby>産業<rt>さんぎょう</rt></ruby>・<ruby>農業<rt>のうぎょう</rt></ruby>",
+                question: "<ruby>静岡市<rt>しずおかし</rt></ruby>につくる会社が多く、もともと木からつくった<ruby>模型<rt>もけい</rt></ruby>が始まりとされている製品は何でしょう？",
+                choices: [
+                    "プラモデル",
+                    "ひな<ruby>人形<rt>にんぎょう</rt></ruby>",
+                    "だるま",
+                    "<ruby>鋳物<rt>いもの</rt></ruby>"
+                ],
+                answerIndex: 0,
+                explanation: "<ruby>静岡市<rt>しずおかし</rt></ruby>ではプラモデルづくりがとてもさかんです。また、<ruby>久能山<rt>くのうざん</rt></ruby>の<ruby>石<rt>いし</rt></ruby>がきを利用した「<ruby>石<rt>いし</rt></ruby>がきいちご」も知られています。"
+            },
+            {
+                id: "shizuoka_9",
+                round: "ROUND_6",
+                roundLabel: "第6回",
+                pref: "静岡県",
+                prefRuby: "<ruby>静岡県<rt>しずおかけん</rt></ruby>",
+                category: "<ruby>環境<rt>かんきょう</rt></ruby>・<ruby>歴史<rt>れきし</rt></ruby>",
+                question: "1970年ごろに海がよごれて「ヘドロ<ruby>公害<rt>こうがい</rt></ruby>」が発生し、その後の努力できれいになった<ruby>静岡県<rt>しずおかけん</rt></ruby>の港はどこでしょう？",
+                choices: [
+                    "<ruby>田子の浦<rt>たごのうら</rt></ruby>",
+                    "<ruby>三保の松原<rt>みほのまつばら</rt></ruby>",
+                    "<ruby>三崎港<rt>みさきこう</rt></ruby>",
+                    "<ruby>銚子港<rt>ちょうしこう</rt></ruby>"
+                ],
+                answerIndex: 0,
+                explanation: "<ruby>田子の浦<rt>たごのうら</rt></ruby>でヘドロ<ruby>公害<rt>こうがい</rt></ruby>が起きました。"
+            },
+            {
+                id: "shizuoka_10",
+                round: "ROUND_6",
+                roundLabel: "第6回",
+                pref: "静岡県",
+                prefRuby: "<ruby>静岡県<rt>しずおかけん</rt></ruby>",
+                category: "<ruby>都道府県図<rt>とどうふけんず</rt></ruby>かん",
+                question: "<ruby>静岡県<rt>しずおかけん</rt></ruby>の「<ruby>県の花<rt>けんのはな</rt></ruby>」であり、花言葉が「<ruby>恋<rt>こい</rt></ruby>の<ruby>喜<rt>よろこ</rt></ruby>び」である花は何でしょう？",
+                choices: [
+                    "ツツジ",
+                    "バラ",
+                    "ナノハナ",
+                    "スイセン"
+                ],
+                answerIndex: 0,
+                explanation: "<ruby>静岡県<rt>しずおかけん</rt></ruby>の<ruby>県の花<rt>けんのはな</rt></ruby>は「ツツジ」です。<ruby>県章<rt>けんしょう</rt></ruby>は<ruby>静岡県<rt>しずおかけん</rt></ruby>の形と<ruby>富士山<rt>ふじさん</rt></ruby>の形を合わせています。"
+            },
+
+            // ==========================================
+            // 第6回：埼玉県（10問）p.23, p.24
+            // ==========================================
+            {
+                id: "saitama_1",
+                round: "ROUND_6",
+                roundLabel: "第6回",
+                pref: "埼玉県",
+                prefRuby: "<ruby>埼玉県<rt>さいたまけん</rt></ruby>",
+                category: "<ruby>県庁所在地<rt>けんちょうしょざいち</rt></ruby>・<ruby>都市<rt>とし</rt></ruby>",
+                question: "日本で最も「市の数」が多く、大都市に<ruby>通勤<rt>つうきん</rt></ruby>・<ruby>通学<rt>つうがく</rt></ruby>する人が多く住む「ベッドタウン」がある<ruby>埼玉県<rt>さいたまけん</rt></ruby>の<ruby>県庁所在地<rt>けんちょうしょざいち</rt></ruby>はどこでしょう？",
+                choices: [
+                    "さいたま<ruby>市<rt>し</rt></ruby>",
+                    "<ruby>川越市<rt>かわごえし</rt></ruby>",
+                    "<ruby>熊谷市<rt>くまがやし</rt></ruby>",
+                    "<ruby>川口市<rt>かわぐちし</rt></ruby>"
+                ],
+                answerIndex: 0,
+                explanation: "<ruby>埼玉県<rt>さいたまけん</rt></ruby>は日本で最も市の数が多い県で、<ruby>県庁所在地<rt>けんちょうしょざいち</rt></ruby>はひらがなの「さいたま<ruby>市<rt>し</rt></ruby>」です。"
+            },
+            {
+                id: "saitama_2",
+                round: "ROUND_6",
+                roundLabel: "第6回",
+                pref: "埼玉県",
+                prefRuby: "<ruby>埼玉県<rt>さいたまけん</rt></ruby>",
+                category: "<ruby>歴史<rt>れきし</rt></ruby>・<ruby>観光<rt>かんこう</rt></ruby>",
+                question: "<ruby>江戸時代<rt>えどじだい</rt></ruby>に<ruby>城下町<rt>じょうかまち</rt></ruby>として栄え、今も古い町並みが残ることから「<ruby>小江戸<rt>こえど</rt></ruby>」とよばれる<ruby>埼玉県<rt>さいたまけん</rt></ruby>の市はどこでしょう？",
+                choices: [
+                    "<ruby>川越市<rt>かわごえし</rt></ruby>",
+                    "<ruby>行田市<rt>ぎょうだし</rt></ruby>",
+                    "<ruby>秩父市<rt>ちちぶし</rt></ruby>",
+                    "<ruby>深谷市<rt>ふかやし</rt></ruby>"
+                ],
+                answerIndex: 0,
+                explanation: "<ruby>川越市<rt>かわごえし</rt></ruby>は<ruby>江戸時代<rt>えどじだい</rt></ruby>に<ruby>城下町<rt>じょうかまち</rt></ruby>として栄え、「<ruby>小江戸<rt>こえど</rt></ruby>」とよばれています。"
+            },
+            {
+                id: "saitama_3",
+                round: "ROUND_6",
+                roundLabel: "第6回",
+                pref: "埼玉県",
+                prefRuby: "<ruby>埼玉県<rt>さいたまけん</rt></ruby>",
+                category: "<ruby>産業<rt>さんぎょう</rt></ruby>・<ruby>資源<rt>しげん</rt></ruby>",
+                question: "<ruby>秩父市<rt>ちちぶし</rt></ruby>近くの<ruby>武甲山<rt>ぶこうざん</rt></ruby>で<ruby>産出<rt>さんしゅつ</rt></ruby>され、セメントやコンクリートをつくるのに用いられるものは何でしょう？",
+                choices: [
+                    "<ruby>石灰石<rt>せっかいせき</rt></ruby>",
+                    "<ruby>鉄鉱石<rt>てっこうせき</rt></ruby>",
+                    "<ruby>銅鉱石<rt>どうこうせき</rt></ruby>",
+                    "<ruby>石炭<rt>せきたん</rt></ruby>"
+                ],
+                answerIndex: 0,
+                explanation: "<ruby>武甲山<rt>ぶこうざん</rt></ruby>では<ruby>石灰石<rt>せっかいせき</rt></ruby>が<ruby>産出<rt>さんしゅつ</rt></ruby>され、セメントやコンクリートの<ruby>原料<rt>げんりょう</rt></ruby>になります。"
+            },
+            {
+                id: "saitama_4",
+                round: "ROUND_6",
+                roundLabel: "第6回",
+                pref: "埼玉県",
+                prefRuby: "<ruby>埼玉県<rt>さいたまけん</rt></ruby>",
+                category: "<ruby>産業<rt>さんぎょう</rt></ruby>・<ruby>工芸<rt>こうげい</rt></ruby>",
+                question: "さいたま<ruby>市<rt>し</rt></ruby>の<ruby>岩槻区<rt>いわつきく</rt></ruby>で生産がさかんな<ruby>伝統工芸品<rt>でんとうこうげいひん</rt></ruby>と、その技術を伝えたとされる<ruby>職人<rt>しょくにん</rt></ruby>が<ruby>修理<rt>しゅうり</rt></ruby>した建物の組み合わせはどれでしょう？",
+                choices: [
+                    "ひな<ruby>人形<rt>にんぎょう</rt></ruby> ／ <ruby>日光東照宮<rt>にっこうとうしょうぐう</rt></ruby>",
+                    "だるま ／ <ruby>浅草寺<rt>せんそうじ</rt></ruby>",
+                    "<ruby>輪島塗<rt>わじまぬり</rt></ruby> ／ <ruby>兼六園<rt>けんろくえん</rt></ruby>",
+                    "<ruby>寄木細工<rt>よせぎざいく</rt></ruby> ／ <ruby>小田原城<rt>おだわらじょう</rt></ruby>"
+                ],
+                answerIndex: 0,
+                explanation: "<ruby>岩槻区<rt>いわつきく</rt></ruby>ではひな<ruby>人形<rt>にんぎょう</rt></ruby>の生産がさかんで、<ruby>日光東照宮<rt>にっこうとうしょうぐう</rt></ruby>を<ruby>修理<rt>しゅうり</rt></ruby>した<ruby>職人<rt>しょくにん</rt></ruby>が伝えたとされています。"
+            },
+            {
+                id: "saitama_5",
+                round: "ROUND_6",
+                roundLabel: "第6回",
+                pref: "埼玉県",
+                prefRuby: "<ruby>埼玉県<rt>さいたまけん</rt></ruby>",
+                category: "<ruby>産業<rt>さんぎょう</rt></ruby>",
+                question: "<ruby>川口市<rt>かわぐちし</rt></ruby>でさかんな、<ruby>金属<rt>きんぞく</rt></ruby>をとかして<ruby>型<rt>かた</rt></ruby>に流しこんでつくる産業（マンホールのふたなど）を何というでしょう？",
+                choices: [
+                    "<ruby>鋳物<rt>いもの</rt></ruby>",
+                    "<ruby>漆器<rt>しっき</rt></ruby>",
+                    "<ruby>陶磁器<rt>とうじき</rt></ruby>",
+                    "<ruby>絹織物<rt>きぬおりもの</rt></ruby>"
+                ],
+                answerIndex: 0,
+                explanation: "<ruby>川口市<rt>かわぐちし</rt></ruby>では「<ruby>鋳物<rt>いもの</rt></ruby>」の生産がさかんです。また、<ruby>草加市<rt>そうかし</rt></ruby>の「<ruby>草加<rt>そうか</rt></ruby>せんべい」も有名です。"
+            },
+            {
+                id: "saitama_6",
+                round: "ROUND_6",
+                roundLabel: "第6回",
+                pref: "埼玉県",
+                prefRuby: "<ruby>埼玉県<rt>さいたまけん</rt></ruby>",
+                category: "<ruby>歴史<rt>れきし</rt></ruby>",
+                question: "<ruby>行田市<rt>ぎょうだし</rt></ruby>にある約1600年前につくられた<ruby>前方後円墳<rt>ぜんぽうこうえんふん</rt></ruby>で、<ruby>漢字<rt>かんじ</rt></ruby>がきざまれた古い<ruby>鉄剣<rt>てっけん</rt></ruby>がみつかった<ruby>古墳<rt>こふん</rt></ruby>はどれでしょう？",
+                choices: [
+                    "<ruby>稲荷山古墳<rt>いなりやまこふん</rt></ruby>",
+                    "<ruby>岩宿遺跡<rt>いわじゅくいせき</rt></ruby>",
+                    "<ruby>大仙古墳<rt>だいせんこふん</rt></ruby>",
+                    "<ruby>三内丸山遺跡<rt>さんないまるやまいせき</rt></ruby>"
+                ],
+                answerIndex: 0,
+                explanation: "<ruby>稲荷山古墳<rt>いなりやまこふん</rt></ruby>からは、<ruby>漢字<rt>かんじ</rt></ruby>がきざまれた古い<ruby>鉄剣<rt>てっけん</rt></ruby>がみつかりました。"
+            },
+            {
+                id: "saitama_7",
+                round: "ROUND_6",
+                roundLabel: "第6回",
+                pref: "埼玉県",
+                prefRuby: "<ruby>埼玉県<rt>さいたまけん</rt></ruby>",
+                category: "<ruby>農業<rt>のうぎょう</rt></ruby>・<ruby>名産<rt>めいさん</rt></ruby>",
+                question: "<ruby>明治時代<rt>めいじじだい</rt></ruby>から<ruby>栽培<rt>さいばい</rt></ruby>されている<ruby>深谷市<rt>ふかやし</rt></ruby>のねぎと、<ruby>狭山市<rt>さやまし</rt></ruby>や<ruby>入間市<rt>いるまし</rt></ruby>で<ruby>栽培<rt>さいばい</rt></ruby>される<ruby>濃厚<rt>のうこう</rt></ruby>な甘みが特徴のお茶の名前はどれでしょう？",
+                choices: [
+                    "<ruby>深谷<rt>ふかや</rt></ruby>ねぎ ／ <ruby>狭山茶<rt>さやまちゃ</rt></ruby>",
+                    "<ruby>下仁田<rt>しもにた</rt></ruby>ねぎ ／ <ruby>宇治茶<rt>うじちゃ</rt></ruby>",
+                    "<ruby>岩槻<rt>いわつき</rt></ruby>ねぎ ／ <ruby>牧之原茶<rt>まきのはらちゃ</rt></ruby>",
+                    "<ruby>九条<rt>くじょう</rt></ruby>ねぎ ／ <ruby>静岡茶<rt>しずおかちゃ</rt></ruby>"
+                ],
+                answerIndex: 0,
+                explanation: "<ruby>深谷市<rt>ふかやし</rt></ruby>の「<ruby>深谷<rt>ふかや</rt></ruby>ねぎ」と、深い味わいで人気の「<ruby>狭山茶<rt>さやまちゃ</rt></ruby>」が有名です。"
+            },
+            {
+                id: "saitama_8",
+                round: "ROUND_6",
+                roundLabel: "第6回",
+                pref: "埼玉県",
+                prefRuby: "<ruby>埼玉県<rt>さいたまけん</rt></ruby>",
+                category: "<ruby>気候<rt>きこう</rt></ruby>・<ruby>施設<rt>しせつ</rt></ruby>",
+                question: "夏には40℃をこえる気温を記録したことがある市と、<ruby>大宮駅<rt>おおみやえき</rt></ruby>の近くにある人気の博物館の組み合わせはどれでしょう？",
+                choices: [
+                    "<ruby>熊谷市<rt>くまがやし</rt></ruby> ／ <ruby>鉄道博物館<rt>てつどうはくぶつかん</rt></ruby>",
+                    "<ruby>川越市<rt>かわごえし</rt></ruby> ／ <ruby>恐竜博物館<rt>きょうりゅうはくぶつかん</rt></ruby>",
+                    "<ruby>秩父市<rt>ちちぶし</rt></ruby> ／ <ruby>天文科学館<rt>てんもんかがくかん</rt></ruby>",
+                    "<ruby>草加市<rt>そうかし</rt></ruby> ／ <ruby>宇宙センター<rt>うちゅうセンター</rt></ruby>"
+                ],
+                answerIndex: 0,
+                explanation: "<ruby>熊谷市<rt>くまがやし</rt></ruby>は夏の猛暑で知られ、さいたま市<ruby>大宮駅<rt>おおみやえき</rt></ruby>近くには「<ruby>鉄道博物館<rt>てつどうはくぶつかん</rt></ruby>」があります。"
+            },
+            {
+                id: "saitama_9",
+                round: "ROUND_6",
+                roundLabel: "第6回",
+                pref: "埼玉県",
+                prefRuby: "<ruby>埼玉県<rt>さいたまけん</rt></ruby>",
+                category: "<ruby>都道府県図<rt>とどうふけんず</rt></ruby>かん",
+                question: "<ruby>埼玉県<rt>さいたまけん</rt></ruby>の「<ruby>県の花<rt>けんのはな</rt></ruby>」であり、<ruby>湿<rt>しめ</rt></ruby>った土地などに育つ<ruby>一年草<rt>いちねんそう</rt></ruby>は何でしょう？",
+                choices: [
+                    "サクラソウ",
+                    "フジザクラ",
+                    "クロユリ",
+                    "レンゲツツジ"
+                ],
+                answerIndex: 0,
+                explanation: "<ruby>埼玉県<rt>さいたまけん</rt></ruby>の<ruby>県の花<rt>けんのはな</rt></ruby>は「サクラソウ」です。<ruby>県章<rt>けんしょう</rt></ruby>は「まが玉」を円形にならべたものです。"
+            },
+            {
+                id: "saitama_10",
+                round: "ROUND_6",
+                roundLabel: "第6回",
+                pref: "埼玉県",
+                prefRuby: "<ruby>埼玉県<rt>さいたまけん</rt></ruby>",
+                category: "<ruby>歴史<rt>れきし</rt></ruby>・<ruby>伝統野菜<rt>でんとうやさい</rt></ruby>",
+                question: "<ruby>江戸時代<rt>えどじだい</rt></ruby>に<ruby>江戸<rt>えど</rt></ruby>に近かったことから、五街道ぞいに<ruby>通行人<rt>つうこうにん</rt></ruby>が<ruby>宿泊<rt>しゅくはく</rt></ruby>するためにつくられて発達した町と、<ruby>埼玉県<rt>さいたまけん</rt></ruby>の伝統野菜の組み合わせはどれでしょう？",
+                choices: [
+                    "<ruby>宿場町<rt>しゅくばまち</rt></ruby> ／ <ruby>岩槻<rt>いわつき</rt></ruby>ねぎ",
+                    "<ruby>城下町<rt>じょうかまち</rt></ruby> ／ <ruby>大塚人参<rt>おおつかにんじん</rt></ruby>",
+                    "<ruby>門前町<rt>もんぜんまち</rt></ruby> ／ <ruby>賀茂<rt>かも</rt></ruby>なす",
+                    "<ruby>港町<rt>みなとまち</rt></ruby> ／ <ruby>桜島大根<rt>さくらじまだいこん</rt></ruby>"
+                ],
+                answerIndex: 0,
+                explanation: "<ruby>五街道<rt>ごかいどう</rt></ruby>ぞいには「<ruby>宿場町<rt>しゅくばまち</rt></ruby>」が発達しました。また、<ruby>埼玉県<rt>さいたまけん</rt></ruby>の伝統野菜として「<ruby>岩槻<rt>いわつき</rt></ruby>ねぎ」が知られています（ユネスコ無形文化遺産には「和食」が登録されています）。"
+            },
+
+            // ==========================================
+            // 第7回：東京都（10問）p.25, p.26
+            // ==========================================
+            {
+                id: "tokyo_1",
+                round: "ROUND_7",
+                roundLabel: "第7回",
+                pref: "東京都",
+                prefRuby: "<ruby>東京都<rt>とうきょうと</rt></ruby>",
+                category: "<ruby>都庁所在地<rt>とちょうしょざいち</rt></ruby>・<ruby>人口<rt>じんこう</rt></ruby>",
+                question: "日本の<ruby>首都<rt>しゅと</rt></ruby>である<ruby>東京都<rt>とうきょうと</rt></ruby>の<ruby>都庁所在地<rt>とちょうしょざいち</rt></ruby>はどこ（何<ruby>区<rt>く</rt></ruby>）でしょう？",
+                choices: [
+                    "<ruby>東京<rt>とうきょう</rt></ruby>（<ruby>新宿区<rt>しんじゅくく</rt></ruby>）",
+                    "<ruby>東京<rt>とうきょう</rt></ruby>（<ruby>千代田区<rt>ちよだく</rt></ruby>）",
+                    "<ruby>東京<rt>とうきょう</rt></ruby>（<ruby>台東区<rt>たいとうく</rt></ruby>）",
+                    "<ruby>東京<rt>とうきょう</rt></ruby>（<ruby>中央区<rt>ちゅうおうく</rt></ruby>）"
+                ],
+                answerIndex: 0,
+                explanation: "<ruby>都庁所在地<rt>とちょうしょざいち</rt></ruby>は「<ruby>東京<rt>とうきょう</rt></ruby>（<ruby>新宿区<rt>しんじゅくく</rt></ruby>）」です。<ruby>東京都<rt>とうきょうと</rt></ruby>の<ruby>人口<rt>じんこう</rt></ruby>は約1404万人で、日本の全<ruby>人口<rt>じんこう</rt></ruby>のおよそ9分の1をしめています。"
+            },
+            {
+                id: "tokyo_2",
+                round: "ROUND_7",
+                roundLabel: "第7回",
+                pref: "東京都",
+                prefRuby: "<ruby>東京都<rt>とうきょうと</rt></ruby>",
+                category: "<ruby>政治<rt>せいじ</rt></ruby>・<ruby>歴史<rt>れきし</rt></ruby>",
+                question: "かつての<ruby>江戸城<rt>えどじょう</rt></ruby>で、<ruby>明治時代<rt>めいじじだい</rt></ruby>に<ruby>天皇<rt>てんのう</rt></ruby>の住まいとなった場所や、全国から<ruby>国会議員<rt>こっかいぎいん</rt></ruby>が集まる「<ruby>国会議事堂<rt>こっかいぎじどう</rt></ruby>」があるのは何<ruby>区<rt>く</rt></ruby>でしょう？",
+                choices: [
+                    "<ruby>千代田区<rt>ちよだく</rt></ruby>",
+                    "<ruby>新宿区<rt>しんじゅくく</rt></ruby>",
+                    "<ruby>渋谷区<rt>しぶやく</rt></ruby>",
+                    "<ruby>大田区<rt>おおたく</rt></ruby>"
+                ],
+                answerIndex: 0,
+                explanation: "<ruby>皇居<rt>こうきょ</rt></ruby>や<ruby>国会議事堂<rt>こっかいぎじどう</rt></ruby>は<ruby>千代田区<rt>ちよだく</rt></ruby>にあり、日本の<ruby>政治<rt>せいじ</rt></ruby>の中心となっています。"
+            },
+            {
+                id: "tokyo_3",
+                round: "ROUND_7",
+                roundLabel: "第7回",
+                pref: "東京都",
+                prefRuby: "<ruby>東京都<rt>とうきょうと</rt></ruby>",
+                category: "<ruby>地形<rt>ちけい</rt></ruby>・<ruby>自然<rt>しぜん</rt></ruby>",
+                question: "<ruby>多摩川<rt>たまがわ</rt></ruby>につくられた「<ruby>小河内<rt>おごうち</rt></ruby>ダム（<ruby>奥多摩湖<rt>おくたまこ</rt></ruby>）」にたくわえられた水は、主に何として使われているでしょう？",
+                choices: [
+                    "<ruby>水道水<rt>すいどうすい</rt></ruby>",
+                    "<ruby>農業用水<rt>のうぎょうようすい</rt></ruby>",
+                    "<ruby>工業用水<rt>こうぎょうようすい</rt></ruby>",
+                    "<ruby>魚<rt>さかな</rt></ruby>の<ruby>養殖<rt>ようしょく</rt></ruby>"
+                ],
+                answerIndex: 0,
+                explanation: "<ruby>小河内<rt>おごうち</rt></ruby>ダムの水は、都民の大切な「<ruby>水道水<rt>すいどうすい</rt></ruby>」として使われています。"
+            },
+            {
+                id: "tokyo_4",
+                round: "ROUND_7",
+                roundLabel: "第7回",
+                pref: "東京都",
+                prefRuby: "<ruby>東京都<rt>とうきょうと</rt></ruby>",
+                category: "<ruby>地形<rt>ちけい</rt></ruby>・<ruby>自然<rt>しぜん</rt></ruby>",
+                question: "<ruby>東京都<rt>とうきょうと</rt></ruby>で最も<ruby>標高<rt>ひょうこう</rt></ruby>が高い山（2017m）はどれでしょう？",
+                choices: [
+                    "<ruby>雲取山<rt>くもとりやま</rt></ruby>",
+                    "<ruby>高尾山<rt>たかおさん</rt></ruby>",
+                    "<ruby>三原山<rt>みはらやま</rt></ruby>",
+                    "<ruby>武甲山<rt>ぶこうざん</rt></ruby>"
+                ],
+                answerIndex: 0,
+                explanation: "<ruby>東京都<rt>とうきょうと</rt></ruby>で最も<ruby>標高<rt>ひょうこう</rt></ruby>が高い山は<ruby>雲取山<rt>くもとりやま</rt></ruby>（2017m）です。"
+            },
+            {
+                id: "tokyo_5",
+                round: "ROUND_7",
+                roundLabel: "第7回",
+                pref: "東京都",
+                prefRuby: "<ruby>東京都<rt>とうきょうと</rt></ruby>",
+                category: "<ruby>歴史<rt>れきし</rt></ruby>・<ruby>文化<rt>ぶんか</rt></ruby>",
+                question: "「<ruby>山の手<rt>やまのて</rt></ruby>」とよばれる<ruby>台地<rt>だいち</rt></ruby>に対し、海や川に近い<ruby>低地<rt>ていち</rt></ruby>を埋め立てて<ruby>江戸時代<rt>えどじだい</rt></ruby>に<ruby>職人<rt>しょくにん</rt></ruby>たちが集まってくらした地域（<ruby>浅草寺<rt>せんそうじ</rt></ruby>の<ruby>雷門<rt>かみなりもん</rt></ruby>などがある）を何というでしょう？",
+                choices: [
+                    "<ruby>下町<rt>したまち</rt></ruby>",
+                    "<ruby>城下町<rt>じょうかまち</rt></ruby>",
+                    "<ruby>宿場町<rt>しゅくばまち</rt></ruby>",
+                    "<ruby>港町<rt>みなとまち</rt></ruby>"
+                ],
+                answerIndex: 0,
+                explanation: "<ruby>台東区<rt>たいとうく</rt></ruby>の<ruby>浅草寺<rt>せんそうじ</rt></ruby>（<ruby>雷門<rt>かみなりもん</rt></ruby>の赤いちょうちんがシンボル）の周辺などは「<ruby>下町<rt>したまち</rt></ruby>」とよばれます。"
+            },
+            {
+                id: "tokyo_6",
+                round: "ROUND_7",
+                roundLabel: "第7回",
+                pref: "東京都",
+                prefRuby: "<ruby>東京都<rt>とうきょうと</rt></ruby>",
+                category: "<ruby>地形<rt>ちけい</rt></ruby>・<ruby>自然<rt>しぜん</rt></ruby>",
+                question: "<ruby>東京都<rt>とうきょうと</rt></ruby>の島々のうち、一度も<ruby>大陸<rt>たいりく</rt></ruby>とつながったことがなく<ruby>独自<rt>どくじ</rt></ruby>の<ruby>進化<rt>しんか</rt></ruby>をとげた<ruby>生物<rt>せいぶつ</rt></ruby>が生息し、<ruby>世界自然遺産<rt>せかいしぜんいさん</rt></ruby>に登録されたのはどれでしょう？",
+                choices: [
+                    "<ruby>小笠原諸島<rt>おがさわらしょとう</rt></ruby>",
+                    "<ruby>伊豆諸島<rt>いずしょとう</rt></ruby>",
+                    "<ruby>五島列島<rt>ごとうれっとう</rt></ruby>",
+                    "<ruby>佐渡島<rt>さどがしま</rt></ruby>"
+                ],
+                answerIndex: 0,
+                explanation: "<ruby>小笠原諸島<rt>おがさわらしょとう</rt></ruby>（<ruby>父島<rt>ちちじま</rt></ruby>・<ruby>母島<rt>ははじま</rt></ruby>など）は<ruby>世界自然遺産<rt>せかいしぜんいさん</rt></ruby>に登録されています。また、<ruby>伊豆諸島<rt>いずしょとう</rt></ruby>の<ruby>伊豆大島<rt>いずおおしま</rt></ruby>にある<ruby>三原山<rt>みはらやま</rt></ruby>は何度も<ruby>噴火<rt>ふんか</rt></ruby>しています。"
+            },
+            {
+                id: "tokyo_7",
+                round: "ROUND_7",
+                roundLabel: "第7回",
+                pref: "東京都",
+                prefRuby: "<ruby>東京都<rt>とうきょうと</rt></ruby>",
+                category: "<ruby>地形<rt>ちけい</rt></ruby>・<ruby>交通<rt>こうつう</rt></ruby>",
+                question: "<ruby>東京湾<rt>とうきょうわん</rt></ruby>に海を埋め立ててつくられた土地「<ruby>埋<rt>う</rt></ruby>め<ruby>立<rt>た</rt></ruby>て<ruby>地<rt>ち</rt></ruby>」の上につくられた、<ruby>大田区<rt>おおたく</rt></ruby>にある空港はどれでしょう？",
+                choices: [
+                    "<ruby>東京国際空港<rt>とうきょうこくさいくうこう</rt></ruby>（<ruby>羽田空港<rt>はねだくうこう</rt></ruby>）",
+                    "<ruby>成田国際空港<rt>なりたこくさいくうこう</rt></ruby>",
+                    "<ruby>小松空港<rt>こまつくうこう</rt></ruby>",
+                    "<ruby>中部国際空港<rt>ちゅうぶこくさいくうこう</rt></ruby>"
+                ],
+                answerIndex: 0,
+                explanation: "<ruby>東京国際空港<rt>とうきょうこくさいくうこう</rt></ruby>（<ruby>羽田空港<rt>はねだくうこう</rt></ruby>）は<ruby>東京湾<rt>とうきょうわん</rt></ruby>の<ruby>埋<rt>う</rt></ruby>め<ruby>立<rt>た</rt></ruby>て<ruby>地<rt>ち</rt></ruby>につくられました。"
+            },
+            {
+                id: "tokyo_8",
+                round: "ROUND_7",
+                roundLabel: "第7回",
+                pref: "東京都",
+                prefRuby: "<ruby>東京都<rt>とうきょうと</rt></ruby>",
+                category: "<ruby>豆知識<rt>まめちしき</rt></ruby>",
+                question: "お寿司に使われるうなぎやこはだなど、<ruby>東京<rt>とうきょう</rt></ruby>の港の「<ruby>前<rt>まえ</rt></ruby>」にある<ruby>浅瀬<rt>あさせ</rt></ruby>の海や<ruby>干潟<rt>ひがた</rt></ruby>でとれた<ruby>魚介類<rt>ぎょかいるい</rt></ruby>を何というでしょう？",
+                choices: [
+                    "<ruby>江戸前<rt>えどまえ</rt></ruby>",
+                    "<ruby>小江戸<rt>こえど</rt></ruby>",
+                    "<ruby>駿河湾産<rt>するがわんさん</rt></ruby>",
+                    "<ruby>若狭湾産<rt>わかさわんさん</rt></ruby>"
+                ],
+                answerIndex: 0,
+                explanation: "<ruby>東京湾<rt>とうきょうわん</rt></ruby>は全体的に浅いのが特徴で、ここでとれた<ruby>魚介類<rt>ぎょかいるい</rt></ruby>を「<ruby>江戸前<rt>えどまえ</rt></ruby>」とよびます。"
+            },
+            {
+                id: "tokyo_9",
+                round: "ROUND_7",
+                roundLabel: "第7回",
+                pref: "東京都",
+                prefRuby: "<ruby>東京都<rt>とうきょうと</rt></ruby>",
+                category: "<ruby>都道府県図<rt>とどうふけんず</rt></ruby>かん",
+                question: "<ruby>染井村<rt>そめいむら</rt></ruby>というところでつくられたことが始まりとされている、<ruby>東京都<rt>とうきょうと</rt></ruby>の「<ruby>都の花<rt>とのはな</rt></ruby>」は何でしょう？",
+                choices: [
+                    "ソメイヨシノ",
+                    "フジザクラ",
+                    "サクラソウ",
+                    "クロユリ"
+                ],
+                answerIndex: 0,
+                explanation: "<ruby>東京都<rt>とうきょうと</rt></ruby>の<ruby>都の花<rt>とのはな</rt></ruby>は「ソメイヨシノ」です。また、<ruby>東京都<rt>とうきょうと</rt></ruby>はネクタイづくりや、<ruby>渋谷<rt>しぶや</rt></ruby>・<ruby>原宿<rt>はらじゅく</rt></ruby>のファッションも有名です。"
+            },
+            {
+                id: "tokyo_10",
+                round: "ROUND_7",
+                roundLabel: "第7回",
+                pref: "東京都",
+                prefRuby: "<ruby>東京都<rt>とうきょうと</rt></ruby>",
+                category: "<ruby>都市<rt>とし</rt></ruby>の<ruby>役割<rt>やくわり</rt></ruby>",
+                question: "<ruby>東京都<rt>とうきょうと</rt></ruby>の<ruby>都章<rt>としょう</rt></ruby>（シンボルマーク）が表しているイメージとして正しいものはどれでしょう？",
+                choices: [
+                    "<ruby>太陽<rt>たいよう</rt></ruby>から光がさす、日本の中心となるようなイメージ",
+                    "「人」の文字が3つならんだ<ruby>富士山<rt>ふじさん</rt></ruby>のイメージ",
+                    "「まが玉」を円形にならべたイメージ",
+                    "「<ruby>石<rt>いし</rt></ruby>」と「<ruby>川<rt>かわ</rt></ruby>」で<ruby>能登半島<rt>のとはんとう</rt></ruby>を表したイメージ"
+                ],
+                answerIndex: 0,
+                explanation: "<ruby>東京都<rt>とうきょうと</rt></ruby>の<ruby>都章<rt>としょう</rt></ruby>は、太陽から光がさし、日本の中心となるようなイメージを表しています。"
+            },
+
+            // ==========================================
+            // 第7回：神奈川県（10問）p.27, p.28
+            // ==========================================
+            {
+                id: "kanagawa_1",
+                round: "ROUND_7",
+                roundLabel: "第7回",
+                pref: "神奈川県",
+                prefRuby: "<ruby>神奈川県<rt>かながわけん</rt></ruby>",
+                category: "<ruby>県庁所在地<rt>けんちょうしょざいち</rt></ruby>・<ruby>人口<rt>じんこう</rt></ruby>",
+                question: "<ruby>神奈川県<rt>かながわけん</rt></ruby>の<ruby>県庁所在地<rt>けんちょうしょざいち</rt></ruby>で、<ruby>東京特別区<rt>とうきょうとくべつく</rt></ruby>（23<ruby>区<rt>く</rt></ruby>）をのぞけば日本で最も<ruby>人口<rt>じんこう</rt></ruby>が多い市（約377万人）はどこでしょう？",
+                choices: [
+                    "<ruby>横浜市<rt>よこはまし</rt></ruby>",
+                    "<ruby>川崎市<rt>かわさきし</rt></ruby>",
+                    "<ruby>相模原市<rt>さがみはらし</rt></ruby>",
+                    "<ruby>横須賀市<rt>よこすかし</rt></ruby>"
+                ],
+                answerIndex: 0,
+                explanation: "<ruby>横浜市<rt>よこはまし</rt></ruby>と<ruby>川崎市<rt>かわさきし</rt></ruby>で<ruby>神奈川県<rt>かながわけん</rt></ruby>の<ruby>人口<rt>じんこう</rt></ruby>の半分以上をしめています。"
+            },
+            {
+                id: "kanagawa_2",
+                round: "ROUND_7",
+                roundLabel: "第7回",
+                pref: "神奈川県",
+                prefRuby: "<ruby>神奈川県<rt>かながわけん</rt></ruby>",
+                category: "<ruby>歴史<rt>れきし</rt></ruby>・<ruby>観光<rt>かんこう</rt></ruby>",
+                question: "<ruby>江戸時代<rt>えどじだい</rt></ruby>の終わりに<ruby>横浜港<rt>よこはまこう</rt></ruby>が開かれてから、中国人が移り住んで発展した地区と、<ruby>輸入品<rt>ゆにゅうひん</rt></ruby>を<ruby>保管<rt>ほかん</rt></ruby>したレンガ造りの建物の組み合わせはどれでしょう？",
+                choices: [
+                    "<ruby>横浜中華街<rt>よこはまちゅうかがい</rt></ruby> ／ <ruby>赤<rt>あか</rt></ruby>レンガ<ruby>倉庫<rt>そうこ</rt></ruby>",
+                    "みなとみらい21 ／ <ruby>小河内<rt>おごうち</rt></ruby>ダム",
+                    "<ruby>箱根関所跡<rt>はこねせきしょあと</rt></ruby> ／ <ruby>小田原城<rt>おだわらじょう</rt></ruby>",
+                    "<ruby>鶴岡八幡宮<rt>つるがおかはちまんぐう</rt></ruby> ／ <ruby>鎌倉大仏<rt>かまくらだいぶつ</rt></ruby>"
+                ],
+                answerIndex: 0,
+                explanation: "<ruby>横浜市<rt>よこはまし</rt></ruby>には<ruby>横浜中華街<rt>よこはまちゅうかがい</rt></ruby>や<ruby>赤<rt>あか</rt></ruby>レンガ<ruby>倉庫<rt>そうこ</rt></ruby>、高さ296mのランドマークタワーがある「みなとみらい21」などがあります。"
+            },
+            {
+                id: "kanagawa_3",
+                round: "ROUND_7",
+                roundLabel: "第7回",
+                pref: "神奈川県",
+                prefRuby: "<ruby>神奈川県<rt>かながわけん</rt></ruby>",
+                category: "<ruby>産業<rt>さんぎょう</rt></ruby>",
+                question: "海ぞいに<ruby>石油化学<rt>せきゆかがく</rt></ruby>コンビナートなどの工場が建ちならび、<ruby>工業<rt>こうぎょう</rt></ruby>が発達している<ruby>神奈川県<rt>かながわけん</rt></ruby>の市はどこでしょう？",
+                choices: [
+                    "<ruby>川崎市<rt>かわさきし</rt></ruby>",
+                    "<ruby>鎌倉市<rt>かまくらし</rt></ruby>",
+                    "<ruby>小田原市<rt>おだわらし</rt></ruby>",
+                    "<ruby>箱根町<rt>はこねまち</rt></ruby>"
+                ],
+                answerIndex: 0,
+                explanation: "<ruby>川崎市<rt>かわさきし</rt></ruby>は海ぞいに<ruby>石油化学<rt>せきゆかがく</rt></ruby>コンビナートなどの工場が建ちならんでいます。"
+            },
+            {
+                id: "kanagawa_4",
+                round: "ROUND_7",
+                roundLabel: "第7回",
+                pref: "神奈川県",
+                prefRuby: "<ruby>神奈川県<rt>かながわけん</rt></ruby>",
+                category: "<ruby>漁業<rt>ぎょぎょう</rt></ruby>",
+                question: "<ruby>三浦半島<rt>みうらはんとう</rt></ruby>の先端にあり、まぐろの<ruby>水揚<rt>みずあ</rt></ruby>げが多い漁港として有名な<ruby>神奈川県<rt>かながわけん</rt></ruby>の港はどこでしょう？",
+                choices: [
+                    "<ruby>三崎港<rt>みさきこう</rt></ruby>",
+                    "<ruby>銚子港<rt>ちょうしこう</rt></ruby>",
+                    "<ruby>焼津港<rt>やいづこう</rt></ruby>",
+                    "<ruby>鹿島港<rt>かしまこう</rt></ruby>"
+                ],
+                answerIndex: 0,
+                explanation: "<ruby>三浦半島<rt>みうらはんとう</rt></ruby>の先端にある<ruby>三崎港<rt>みさきこう</rt></ruby>はまぐろの<ruby>水揚<rt>みずあ</rt></ruby>げで有名です。"
+            },
+            {
+                id: "kanagawa_5",
+                round: "ROUND_7",
+                roundLabel: "第7回",
+                pref: "神奈川県",
+                prefRuby: "<ruby>神奈川県<rt>かながわけん</rt></ruby>",
+                category: "<ruby>歴史<rt>れきし</rt></ruby>",
+                question: "<ruby>江戸時代<rt>えどじだい</rt></ruby>の終わりに、アメリカのペリーが「<ruby>黒船<rt>くろふね</rt></ruby>」とよばれる<ruby>軍艦<rt>ぐんかん</rt></ruby>をひきいてやってきて、日本に<ruby>開国<rt>かいこく</rt></ruby>を求めた場所はどこでしょう？",
+                choices: [
+                    "<ruby>浦賀<rt>うらが</rt></ruby>（<ruby>横須賀市<rt>よこすかし</rt></ruby>）",
+                    "<ruby>下田<rt>しもだ</rt></ruby>",
+                    "<ruby>長崎<rt>ながさき</rt></ruby>",
+                    "<ruby>函館<rt>はこだて</rt></ruby>"
+                ],
+                answerIndex: 0,
+                explanation: "<ruby>横須賀市<rt>よこすかし</rt></ruby>の<ruby>浦賀<rt>うらが</rt></ruby>にペリーが<ruby>来航<rt>らいこう</rt></ruby>しました。現在、<ruby>横須賀市<rt>よこすかし</rt></ruby>では自動車や船の生産がさかんです。"
+            },
+            {
+                id: "kanagawa_6",
+                round: "ROUND_7",
+                roundLabel: "第7回",
+                pref: "神奈川県",
+                prefRuby: "<ruby>神奈川県<rt>かながわけん</rt></ruby>",
+                category: "<ruby>歴史<rt>れきし</rt></ruby>・<ruby>地形<rt>ちけい</rt></ruby>",
+                question: "今から約800年前に<ruby>幕府<rt>ばくふ</rt></ruby>が開かれた<ruby>鎌倉<rt>かまくら</rt></ruby>が、<ruby>政治<rt>せいじ</rt></ruby>の中心地に選ばれた地形の理由はどれでしょう？",
+                choices: [
+                    "三方が山で一方が海に面しており、敵から守りやすいから",
+                    "まわりがすべて平らな<ruby>盆地<rt>ぼんち</rt></ruby>で米づくりに便利だったから",
+                    "<ruby>大きな湖<rt>おおきなみずうみ</rt></ruby>の真ん中にあって船でしか行けなかったから",
+                    "近くに<ruby>石灰石<rt>せっかいせき</rt></ruby>がたくさんとれる山があったから"
+                ],
+                answerIndex: 0,
+                explanation: "<ruby>鎌倉<rt>かまくら</rt></ruby>は三方が山、南が海に面した守りやすい地形だったため<ruby>幕府<rt>ばくふ</rt></ruby>が開かれました。<ruby>鶴岡八幡宮<rt>つるがおかはちまんぐう</rt></ruby>や高さ10mをこえる<ruby>鎌倉大仏<rt>かまくらだいぶつ</rt></ruby>があります。"
+            },
+            {
+                id: "kanagawa_7",
+                round: "ROUND_7",
+                roundLabel: "第7回",
+                pref: "神奈川県",
+                prefRuby: "<ruby>神奈川県<rt>かながわけん</rt></ruby>",
+                category: "<ruby>歴史<rt>れきし</rt></ruby>・<ruby>交通<rt>こうつう</rt></ruby>",
+                question: "<ruby>江戸時代<rt>えどじだい</rt></ruby>に<ruby>箱根<rt>はこね</rt></ruby>に置かれ、<ruby>通行人<rt>つうこうにん</rt></ruby>や<ruby>荷物<rt>にもつ</rt></ruby>などを厳しく取りしまった施設の跡を何というでしょう？",
+                choices: [
+                    "<ruby>箱根関所跡<rt>はこねせきしょあと</rt></ruby>",
+                    "<ruby>稲荷山古墳<rt>いなりやまこふん</rt></ruby>",
+                    "<ruby>岩宿遺跡<rt>いわじゅくいせき</rt></ruby>",
+                    "<ruby>足利学校<rt>あしかががっこう</rt></ruby>"
+                ],
+                answerIndex: 0,
+                explanation: "<ruby>険<rt>けわ</rt></ruby>しい<ruby>箱根<rt>はこね</rt></ruby>の峠には「<ruby>関所<rt>せきしょ</rt></ruby>」が置かれ、江戸への出入りを取りしまっていました。"
+            },
+            {
+                id: "kanagawa_8",
+                round: "ROUND_7",
+                roundLabel: "第7回",
+                pref: "神奈川県",
+                prefRuby: "<ruby>神奈川県<rt>かながわけん</rt></ruby>",
+                category: "<ruby>産業<rt>さんぎょう</rt></ruby>・<ruby>工芸<rt>こうげい</rt></ruby>",
+                question: "さまざまな木材を組み合わせてつくった<ruby>幾何学<rt>きかがく</rt></ruby>模様が美しい、<ruby>神奈川県<rt>かながわけん</rt></ruby>の<ruby>伝統工芸品<rt>でんとうこうげいひん</rt></ruby>は何でしょう？",
+                choices: [
+                    "<ruby>箱根寄木細工<rt>はこねよせぎざいく</rt></ruby>",
+                    "<ruby>水晶細工<rt>すいしょうざいく</rt></ruby>",
+                    "<ruby>輪島塗<rt>わじまぬり</rt></ruby>",
+                    "<ruby>加賀友禅<rt>かがゆうぜん</rt></ruby>"
+                ],
+                answerIndex: 0,
+                explanation: "<ruby>箱根寄木細工<rt>はこねよせぎざいく</rt></ruby>はいろいろな木材の色や木目を生かした木工品です。"
+            },
+            {
+                id: "kanagawa_9",
+                round: "ROUND_7",
+                roundLabel: "第7回",
+                pref: "神奈川県",
+                prefRuby: "<ruby>神奈川県<rt>かながわけん</rt></ruby>",
+                category: "<ruby>歴史<rt>れきし</rt></ruby>",
+                question: "<ruby>戦国大名<rt>せんごくだいみょう</rt></ruby>の<ruby>北条早雲<rt>ほうじょうそううん</rt></ruby>が<ruby>本拠地<rt>ほんきょち</rt></ruby>としたお城で、現在は<ruby>小田原市<rt>おだわらし</rt></ruby>のシンボルとなっているのはどれでしょう？",
+                choices: [
+                    "<ruby>小田原城<rt>おだわらじょう</rt></ruby>",
+                    "<ruby>江戸城<rt>えどじょう</rt></ruby>",
+                    "<ruby>金沢城<rt>かなざわじょう</rt></ruby>",
+                    "<ruby>川越城<rt>かわごえじょう</rt></ruby>"
+                ],
+                answerIndex: 0,
+                explanation: "<ruby>小田原城<rt>おだわらじょう</rt></ruby>は<ruby>北条早雲<rt>ほうじょうそううん</rt></ruby>が<ruby>本拠地<rt>ほんきょち</rt></ruby>としたお城です。また、<ruby>神奈川県<rt>かながわけん</rt></ruby>にはアメリカ軍基地がある「<ruby>厚木基地<rt>あつぎきち</rt></ruby>」もあります。"
+            },
+            {
+                id: "kanagawa_10",
+                round: "ROUND_7",
+                roundLabel: "第7回",
+                pref: "神奈川県",
+                prefRuby: "<ruby>神奈川県<rt>かながわけん</rt></ruby>",
+                category: "<ruby>都道府県図<rt>とどうふけんず</rt></ruby>かん",
+                question: "<ruby>神奈川県<rt>かながわけん</rt></ruby>の「<ruby>県の花<rt>けんのはな</rt></ruby>」であり、<ruby>上品<rt>じょうひん</rt></ruby>な美しさで昔から多くの人に愛されている花は何でしょう？",
+                choices: [
+                    "ヤマユリ",
+                    "ナノハナ",
+                    "ヤシオツツジ",
+                    "スイセン"
+                ],
+                answerIndex: 0,
+                explanation: "<ruby>神奈川県<rt>かながわけん</rt></ruby>の<ruby>県の花<rt>けんのはな</rt></ruby>は「ヤマユリ」です。<ruby>県章<rt>けんしょう</rt></ruby>は「<ruby>神<rt>かみ</rt></ruby>」の文字を左右対称に表したものです。"
+            },
+
+            // ==========================================
+            // 第8回：茨城県（10問）p.29, p.30
+            // ==========================================
+            {
+                id: "ibaraki_1",
+                round: "ROUND_8",
+                roundLabel: "第8回",
+                pref: "茨城県",
+                prefRuby: "<ruby>茨城県<rt>いばらきけん</rt></ruby>",
+                category: "<ruby>県庁所在地<rt>けんちょうしょざいち</rt></ruby>・<ruby>文化<rt>ぶんか</rt></ruby>",
+                question: "<ruby>茨城県<rt>いばらきけん</rt></ruby>の<ruby>県庁所在地<rt>けんちょうしょざいち</rt></ruby>で、<ruby>江戸時代<rt>えどじだい</rt></ruby>に<ruby>徳川斉昭<rt>とくがわなりあき</rt></ruby>がつくった<ruby>日本三名園<rt>にほんさんめいえん</rt></ruby>の1つ「<ruby>偕楽園<rt>かいらくえん</rt></ruby>」がある市はどこでしょう？",
+                choices: [
+                    "<ruby>水戸市<rt>みとし</rt></ruby>",
+                    "つくば<ruby>市<rt>し</rt></ruby>",
+                    "<ruby>日立市<rt>ひたちし</rt></ruby>",
+                    "<ruby>牛久市<rt>うしくし</rt></ruby>"
+                ],
+                answerIndex: 0,
+                explanation: "<ruby>水戸市<rt>みとし</rt></ruby>にある「<ruby>偕楽園<rt>かいらくえん</rt></ruby>」は、<ruby>金沢市<rt>かなざわし</rt></ruby>の<ruby>兼六園<rt>けんろくえん</rt></ruby>・<ruby>岡山市<rt>おかやまし</rt></ruby>の<ruby>後楽園<rt>こうらくえん</rt></ruby>とならぶ「<ruby>日本三名園<rt>にほんさんめいえん</rt></ruby>」の1つで、ウメやバラが美しい庭園です。"
+            },
+            {
+                id: "ibaraki_2",
+                round: "ROUND_8",
+                roundLabel: "第8回",
+                pref: "茨城県",
+                prefRuby: "<ruby>茨城県<rt>いばらきけん</rt></ruby>",
+                category: "<ruby>地形<rt>ちけい</rt></ruby>・<ruby>農業<rt>のうぎょう</rt></ruby>",
+                question: "日本で2番目に面積が大きい湖で、<ruby>周辺<rt>しゅうへん</rt></ruby>で「れんこん」の<ruby>栽培<rt>さいばい</rt></ruby>が日本一さかんな<ruby>茨城県<rt>いばらきけん</rt></ruby>の湖はどこでしょう？",
+                choices: [
+                    "<ruby>霞ヶ浦<rt>かすみがうら</rt></ruby>",
+                    "<ruby>浜名湖<rt>はまなこ</rt></ruby>",
+                    "<ruby>中禅寺湖<rt>ちゅうぜんじこ</rt></ruby>",
+                    "<ruby>芦ノ湖<rt>あしのこ</rt></ruby>"
+                ],
+                answerIndex: 0,
+                explanation: "<ruby>霞ヶ浦<rt>かすみがうら</rt></ruby>は日本で2番目に大きい湖で、れんこんの生産量が日本一です。<ruby>茨城県<rt>いばらきけん</rt></ruby>はピーマン・メロン・くりの生産量も日本一です。"
+            },
+            {
+                id: "ibaraki_3",
+                round: "ROUND_8",
+                roundLabel: "第8回",
+                pref: "茨城県",
+                prefRuby: "<ruby>茨城県<rt>いばらきけん</rt></ruby>",
+                category: "<ruby>農業<rt>のうぎょう</rt></ruby>",
+                question: "<ruby>茨城県<rt>いばらきけん</rt></ruby>や<ruby>千葉県<rt>ちばけん</rt></ruby>のように、<ruby>東京<rt>とうきょう</rt></ruby>などの<ruby>大消費地<rt>だいしょうひち</rt></ruby>の近くにあるため、<ruby>新鮮<rt>しんせん</rt></ruby>な野菜をすぐに出荷できる場所で行う農業を何というでしょう？",
+                choices: [
+                    "<ruby>近郊農業<rt>きんこうのうぎょう</rt></ruby>",
+                    "<ruby>促成栽培<rt>そくせいさいばい</rt></ruby>",
+                    "<ruby>抑制栽培<rt>よくせいさいばい</rt></ruby>",
+                    "<ruby>酪農<rt>らくのう</rt></ruby>"
+                ],
+                answerIndex: 0,
+                explanation: "<ruby>大消費地<rt>だいしょうひち</rt></ruby>の近くで新鮮な野菜やくだものをつくる「<ruby>近郊農業<rt>きんこうのうぎょう</rt></ruby>」がさかんなため、<ruby>茨城県<rt>いばらきけん</rt></ruby>は「<ruby>関東地方<rt>かんとうちほう</rt></ruby>の<ruby>食糧庫<rt>しょくりょうこ</rt></ruby>」とよばれています。"
+            },
+            {
+                id: "ibaraki_4",
+                round: "ROUND_8",
+                roundLabel: "第8回",
+                pref: "茨城県",
+                prefRuby: "<ruby>茨城県<rt>いばらきけん</rt></ruby>",
+                category: "<ruby>地形<rt>ちけい</rt></ruby>・<ruby>農業<rt>のうぎょう</rt></ruby>",
+                question: "<ruby>利根川<rt>とねがわ</rt></ruby>の下流に広がる「<ruby>水郷<rt>すいごう</rt></ruby>」とよばれる水にめぐまれた土地では、<ruby>大雨<rt>おおあめ</rt></ruby>や<ruby>台風<rt>たいふう</rt></ruby>に備えて何というお米の<ruby>栽培<rt>さいばい</rt></ruby>がさかんでしょう？",
+                choices: [
+                    "<ruby>早場米<rt>はやばまい</rt></ruby>（早く<ruby>収穫<rt>しゅうかく</rt></ruby>する米）",
+                    "もち米",
+                    "古代米",
+                    "インディカ米"
+                ],
+                answerIndex: 0,
+                explanation: "<ruby>水郷地帯<rt>すいごうちたい</rt></ruby>では、<ruby>台風<rt>たいふう</rt></ruby>の季節が来る前に早く<ruby>収穫<rt>しゅうかく</rt></ruby>する「<ruby>早場米<rt>はやばまい</rt></ruby>」の<ruby>栽培<rt>さいばい</rt></ruby>がさかんです。"
+            },
+            {
+                id: "ibaraki_5",
+                round: "ROUND_8",
+                roundLabel: "第8回",
+                pref: "茨城県",
+                prefRuby: "<ruby>茨城県<rt>いばらきけん</rt></ruby>",
+                category: "<ruby>施設<rt>しせつ</rt></ruby>・<ruby>文化<rt>ぶんか</rt></ruby>",
+                question: "<ruby>牛久市<rt>うしくし</rt></ruby>にある「<ruby>牛久大仏<rt>うしくだいぶつ</rt></ruby>」は、<ruby>青銅製<rt>せいどうせい</rt></ruby>の<ruby>像<rt>ぞう</rt></ruby>として世界最大の高さ（およそ何m）をほこるでしょう？",
+                choices: [
+                    "およそ120m",
+                    "およそ10m",
+                    "およそ50m",
+                    "およそ296m"
+                ],
+                answerIndex: 0,
+                explanation: "<ruby>牛久大仏<rt>うしくだいぶつ</rt></ruby>はおよそ120mの高さをほこり、エレベーターで地上85mの<ruby>展望台<rt>てんぼうだい</rt></ruby>に行くことができます。"
+            },
+            {
+                id: "ibaraki_6",
+                round: "ROUND_8",
+                roundLabel: "第8回",
+                pref: "茨城県",
+                prefRuby: "<ruby>茨城県<rt>いばらきけん</rt></ruby>",
+                category: "<ruby>歴史<rt>れきし</rt></ruby>・<ruby>産業<rt>さんぎょう</rt></ruby>",
+                question: "<ruby>武道<rt>ぶどう</rt></ruby>の神様をまつり、<ruby>伊勢神宮<rt>いせじんぐう</rt></ruby>・<ruby>香取神宮<rt>かとりじんぐう</rt></ruby>とともに「<ruby>日本三大神宮<rt>にほんさんだいじんぐう</rt></ruby>」とよばれる神社と、近くの<ruby>掘<rt>ほ</rt></ruby>り<ruby>込<rt>こ</rt></ruby>み式の港の組み合わせはどれでしょう？",
+                choices: [
+                    "<ruby>鹿島神宮<rt>かしまじんぐう</rt></ruby> ／ <ruby>鹿島港<rt>かしまこう</rt></ruby>",
+                    "<ruby>日光東照宮<rt>にっこうとうしょうぐう</rt></ruby> ／ <ruby>銚子港<rt>ちょうしこう</rt></ruby>",
+                    "<ruby>鶴岡八幡宮<rt>つるがおかはちまんぐう</rt></ruby> ／ <ruby>三崎港<rt>みさきこう</rt></ruby>",
+                    "<ruby>浅草寺<rt>せんそうじ</rt></ruby> ／ <ruby>焼津港<rt>やいづこう</rt></ruby>"
+                ],
+                answerIndex: 0,
+                explanation: "<ruby>鹿嶋市<rt>かしまし</rt></ruby>には<ruby>鹿島神宮<rt>かしまじんぐう</rt></ruby>があり、<ruby>鹿嶋市<rt>かしまし</rt></ruby>と<ruby>神栖市<rt>かみすし</rt></ruby>の海ぞいには<ruby>掘<rt>ほ</rt></ruby>り<ruby>込<rt>こ</rt></ruby>み式の<ruby>鹿島港<rt>かしまこう</rt></ruby>（<ruby>鉄鋼<rt>てっこう</rt></ruby>・<ruby>石油化学<rt>せきゆかがく</rt></ruby>コンビナート）があります。"
+            },
+            {
+                id: "ibaraki_7",
+                round: "ROUND_8",
+                roundLabel: "第8回",
+                pref: "茨城県",
+                prefRuby: "<ruby>茨城県<rt>いばらきけん</rt></ruby>",
+                category: "<ruby>科学<rt>かがく</rt></ruby>・<ruby>産業<rt>さんぎょう</rt></ruby>",
+                question: "日本で初めて<ruby>原子力発電<rt>げんしりょくはつでん</rt></ruby>が行われた村と、JAXAの<ruby>宇宙センター<rt>うちゅうセンター</rt></ruby>がある市の組み合わせはどれでしょう？",
+                choices: [
+                    "<ruby>東海村<rt>とうかいむら</rt></ruby> ／ つくば<ruby>市<rt>し</rt></ruby>",
+                    "<ruby>嬬恋村<rt>つまごいむら</rt></ruby> ／ <ruby>日立市<rt>ひたちし</rt></ruby>",
+                    "<ruby>美浜町<rt>みはまちょう</rt></ruby> ／ <ruby>水戸市<rt>みとし</rt></ruby>",
+                    "<ruby>壬生町<rt>みぶまち</rt></ruby> ／ <ruby>結城市<rt>ゆうきし</rt></ruby>"
+                ],
+                answerIndex: 0,
+                explanation: "<ruby>東海村<rt>とうかいむら</rt></ruby>で日本初の<ruby>原子力発電<rt>げんしりょくはつでん</rt></ruby>が行われ、つくば<ruby>市<rt>し</rt></ruby>では<ruby>宇宙開発<rt>うちゅうかいはつ</rt></ruby>の研究が行われています。また、<ruby>日立市<rt>ひたちし</rt></ruby>には大手<ruby>電機<rt>でんき</rt></ruby>メーカーの工場があります。"
+            },
+            {
+                id: "ibaraki_8",
+                round: "ROUND_8",
+                roundLabel: "第8回",
+                pref: "茨城県",
+                prefRuby: "<ruby>茨城県<rt>いばらきけん</rt></ruby>",
+                category: "<ruby>工芸<rt>こうげい</rt></ruby>・<ruby>食文化<rt>しょくぶんか</rt></ruby>",
+                question: "<ruby>結城市<rt>ゆうきし</rt></ruby>の伝統的な<ruby>絹織物<rt>きぬおりもの</rt></ruby>「<ruby>結城紬<rt>ゆうきつむぎ</rt></ruby>」が有名な<ruby>茨城県<rt>いばらきけん</rt></ruby>で、「<ruby>骨<rt>ほね</rt></ruby>以外はすべて<ruby>食<rt>しょく</rt></ruby>す」といわれ冬の鍋料理で人気の魚は何でしょう？",
+                choices: [
+                    "あんこう",
+                    "ずわいがに",
+                    "まぐろ",
+                    "うなぎ"
+                ],
+                answerIndex: 0,
+                explanation: "<ruby>茨城県<rt>いばらきけん</rt></ruby><ruby>沖<rt>おき</rt></ruby>ではあんこう<ruby>漁<rt>りょう</rt></ruby>がさかんで、あんこう<ruby>鍋<rt>なべ</rt></ruby>が有名です。また、<ruby>水戸納豆<rt>みとなっとう</rt></ruby>も特産品です。"
+            },
+            {
+                id: "ibaraki_9",
+                round: "ROUND_8",
+                roundLabel: "第8回",
+                pref: "茨城県",
+                prefRuby: "<ruby>茨城県<rt>いばらきけん</rt></ruby>",
+                category: "<ruby>農業<rt>のうぎょう</rt></ruby>",
+                question: "<ruby>茨城県<rt>いばらきけん</rt></ruby>が全国の<ruby>生産量<rt>せいさんりょう</rt></ruby>日本一をほこる農作物の正しい組み合わせはどれでしょう？",
+                choices: [
+                    "れんこん・ピーマン・メロン・くり",
+                    "りんご・もも・ぶどう・さくらんぼ",
+                    "みかん・うめ・かき・お茶",
+                    "らっかせい・<ruby>日本<rt>にほん</rt></ruby>なし・いちご・こんにゃくいも"
+                ],
+                answerIndex: 0,
+                explanation: "<ruby>茨城県<rt>いばらきけん</rt></ruby>はれんこん・ピーマン・メロン・くりの生産量が日本一です。"
+            },
+            {
+                id: "ibaraki_10",
+                round: "ROUND_8",
+                roundLabel: "第8回",
+                pref: "茨城県",
+                prefRuby: "<ruby>茨城県<rt>いばらきけん</rt></ruby>",
+                category: "<ruby>都道府県図<rt>とどうふけんず</rt></ruby>かん",
+                question: "<ruby>茨城県<rt>いばらきけん</rt></ruby>の「<ruby>県の花<rt>けんのはな</rt></ruby>」であり、<ruby>県章<rt>けんしょう</rt></ruby>にもつぼみが開いていくようすが描かれている花は何でしょう？",
+                choices: [
+                    "バラ",
+                    "ツツジ",
+                    "ナノハナ",
+                    "クロユリ"
+                ],
+                answerIndex: 0,
+                explanation: "<ruby>茨城県<rt>いばらきけん</rt></ruby>の<ruby>県の花<rt>けんのはな</rt></ruby>は「バラ」です。"
+            },
+
+            // ==========================================
+            // 第8回：千葉県（10問）p.31, p.32
+            // ==========================================
+            {
+                id: "chiba_1",
+                round: "ROUND_8",
+                roundLabel: "第8回",
+                pref: "千葉県",
+                prefRuby: "<ruby>千葉県<rt>ちばけん</rt></ruby>",
+                category: "<ruby>県庁所在地<rt>けんちょうしょざいち</rt></ruby>",
+                question: "<ruby>千葉県<rt>ちばけん</rt></ruby>の<ruby>県庁所在地<rt>けんちょうしょざいち</rt></ruby>はどこでしょう？",
+                choices: [
+                    "<ruby>千葉市<rt>ちばし</rt></ruby>",
+                    "<ruby>成田市<rt>なりたし</rt></ruby>",
+                    "<ruby>銚子市<rt>ちょうしし</rt></ruby>",
+                    "<ruby>木更津市<rt>きさらづし</rt></ruby>"
+                ],
+                answerIndex: 0,
+                explanation: "<ruby>千葉県<rt>ちばけん</rt></ruby>の<ruby>県庁所在地<rt>けんちょうしょざいち</rt></ruby>は<ruby>千葉市<rt>ちばし</rt></ruby>です。<ruby>県章<rt>けんしょう</rt></ruby>はカタカナの「チ」と「ハ」を組み合わせてつくられました。"
+            },
+            {
+                id: "chiba_2",
+                round: "ROUND_8",
+                roundLabel: "第8回",
+                pref: "千葉県",
+                prefRuby: "<ruby>千葉県<rt>ちばけん</rt></ruby>",
+                category: "<ruby>農業<rt>のうぎょう</rt></ruby>",
+                question: "<ruby>千葉県<rt>ちばけん</rt></ruby>が<ruby>収穫量<rt>しゅうかくりょう</rt></ruby>日本一をほこる2つの農作物の組み合わせはどれでしょう？",
+                choices: [
+                    "らっかせい（<ruby>落花生<rt>らっかせい</rt></ruby>）・<ruby>日本<rt>にほん</rt></ruby>なし（<ruby>幸水<rt>こうすい</rt></ruby>など）",
+                    "りんご・さくらんぼ",
+                    "ぶどう・もも",
+                    "こんにゃくいも・キャベツ"
+                ],
+                answerIndex: 0,
+                explanation: "<ruby>千葉県<rt>ちばけん</rt></ruby>は「らっかせい」と「<ruby>日本<rt>にほん</rt></ruby>なし」の<ruby>収穫量<rt>しゅうかくりょう</rt></ruby>が日本一です。また、<ruby>下総台地<rt>しもうさだいち</rt></ruby>ではねぎ・ほうれんそう・すいかなどの<ruby>畑作<rt>はたさく</rt></ruby>もさかんです。"
+            },
+            {
+                id: "chiba_3",
+                round: "ROUND_8",
+                roundLabel: "第8回",
+                pref: "千葉県",
+                prefRuby: "<ruby>千葉県<rt>ちばけん</rt></ruby>",
+                category: "<ruby>漁業<rt>ぎょぎょう</rt></ruby>・<ruby>自然<rt>しぜん</rt></ruby>",
+                question: "<ruby>利根川<rt>とねがわ</rt></ruby>の<ruby>河口<rt>かこう</rt></ruby>にあり、<ruby>沖合<rt>おきあい</rt></ruby>で<ruby>暖流<rt>だんりゅう</rt></ruby>（<ruby>日本海流<rt>にほんかいりゅう</rt></ruby>）と<ruby>寒流<rt>かんりゅう</rt></ruby>（<ruby>千島海流<rt>ちしまかいりゅう</rt></ruby>）が出合うためよい<ruby>漁場<rt>ぎょじょう</rt></ruby>となり、さばやいわしの<ruby>水揚<rt>みずあ</rt></ruby>げ量が日本一クラスの港はどこでしょう？",
+                choices: [
+                    "<ruby>銚子港<rt>ちょうしこう</rt></ruby>",
+                    "<ruby>焼津港<rt>やいづこう</rt></ruby>",
+                    "<ruby>三崎港<rt>みさきこう</rt></ruby>",
+                    "<ruby>鹿島港<rt>かしまこう</rt></ruby>"
+                ],
+                answerIndex: 0,
+                explanation: "<ruby>銚子港<rt>ちょうしこう</rt></ruby>は<ruby>暖流<rt>だんりゅう</rt></ruby>と<ruby>寒流<rt>かんりゅう</rt></ruby>がぶつかる豊かな<ruby>漁場<rt>ぎょじょう</rt></ruby>にめぐまれ、日本有数の<ruby>水揚<rt>みずあ</rt></ruby>げ量をほこります。"
+            },
+            {
+                id: "chiba_4",
+                round: "ROUND_8",
+                roundLabel: "第8回",
+                pref: "千葉県",
+                prefRuby: "<ruby>千葉県<rt>ちばけん</rt></ruby>",
+                category: "<ruby>交通<rt>こうつう</rt></ruby>・<ruby>貿易<rt>ぼうえき</rt></ruby>",
+                question: "日本の空の<ruby>玄関口<rt>げんかんぐち</rt></ruby>として有名で、<ruby>貿易額<rt>ぼうえきがく</rt></ruby>が日本で最大の国際空港はどこでしょう？",
+                choices: [
+                    "<ruby>成田国際空港<rt>なりたこくさいくうこう</rt></ruby>",
+                    "<ruby>東京国際空港<rt>とうきょうこくさいくうこう</rt></ruby>（<ruby>羽田<rt>はねだ</rt></ruby>）",
+                    "<ruby>小松空港<rt>こまつくうこう</rt></ruby>",
+                    "<ruby>中部国際空港<rt>ちゅうぶこくさいくうこう</rt></ruby>"
+                ],
+                answerIndex: 0,
+                explanation: "<ruby>成田市<rt>なりたし</rt></ruby>にある<ruby>成田国際空港<rt>なりたこくさいくうこう</rt></ruby>は<ruby>貿易額<rt>ぼうえきがく</rt></ruby>が日本一の空港です。近くには<ruby>日本三大神宮<rt>にほんさんだいじんぐう</rt></ruby>の1つ<ruby>香取神宮<rt>かとりじんぐう</rt></ruby>もあります。"
+            },
+            {
+                id: "chiba_5",
+                round: "ROUND_8",
+                roundLabel: "第8回",
+                pref: "千葉県",
+                prefRuby: "<ruby>千葉県<rt>ちばけん</rt></ruby>",
+                category: "<ruby>交通<rt>こうつう</rt></ruby>・<ruby>施設<rt>しせつ</rt></ruby>",
+                question: "<ruby>神奈川県<rt>かながわけん</rt></ruby><ruby>川崎市<rt>かわさきし</rt></ruby>と<ruby>千葉県<rt>ちばけん</rt></ruby><ruby>木更津市<rt>きさらづし</rt></ruby>を結ぶ<ruby>高速道路<rt>こうそくどうろ</rt></ruby>で、途中に人工の島「<ruby>海<rt>うみ</rt></ruby>ほたる」がある道路は何でしょう？",
+                choices: [
+                    "<ruby>東京湾<rt>とうきょうわん</rt></ruby>アクアライン",
+                    "<ruby>東名高速道路<rt>とうめいこうそくどうろ</rt></ruby>",
+                    "<ruby>常磐自動車道<rt>じょうばんじどうしゃどう</rt></ruby>",
+                    "<ruby>関越自動車道<rt>かんえつじどうしゃどう</rt></ruby>"
+                ],
+                answerIndex: 0,
+                explanation: "<ruby>東京湾<rt>とうきょうわん</rt></ruby>アクアラインのサービスエリア「<ruby>海<rt>うみ</rt></ruby>ほたる」は<ruby>海<rt>うみ</rt></ruby>の上に浮かぶ人工の島です。"
+            },
+            {
+                id: "chiba_6",
+                round: "ROUND_8",
+                roundLabel: "第8回",
+                pref: "千葉県",
+                prefRuby: "<ruby>千葉県<rt>ちばけん</rt></ruby>",
+                category: "<ruby>地形<rt>ちけい</rt></ruby>・<ruby>自然<rt>しぜん</rt></ruby>",
+                question: "およそ66kmも続く<ruby>弓<rt>ゆみ</rt></ruby>なりの<ruby>砂浜海岸<rt>すなはまかいがん</rt></ruby>で、かつていわしの<ruby>地引<rt>じび</rt></ruby>き<ruby>網漁<rt>あみりょう</rt></ruby>がさかんだった<ruby>千葉県<rt>ちばけん</rt></ruby>の海岸はどこでしょう？",
+                choices: [
+                    "<ruby>九十九里浜<rt>くじゅうくりはま</rt></ruby>",
+                    "<ruby>三保の松原<rt>みほのまつばら</rt></ruby>",
+                    "<ruby>東尋坊<rt>とうじんぼう</rt></ruby>",
+                    "<ruby>白米千枚田<rt>しろよねせんまいだ</rt></ruby>"
+                ],
+                answerIndex: 0,
+                explanation: "<ruby>九十九里浜<rt>くじゅうくりはま</rt></ruby>の北の端にある<ruby>犬吠埼<rt>いぬぼうさき</rt></ruby>は、<ruby>初日の出<rt>はつひので</rt></ruby>をみる名所として<ruby>元日<rt>がんたん</rt></ruby>に多くの人が集まります。"
+            },
+            {
+                id: "chiba_7",
+                round: "ROUND_8",
+                roundLabel: "第8回",
+                pref: "千葉県",
+                prefRuby: "<ruby>千葉県<rt>ちばけん</rt></ruby>",
+                category: "<ruby>産業<rt>さんぎょう</rt></ruby>",
+                question: "<ruby>利根川<rt>とねがわ</rt></ruby>の<ruby>水運<rt>すいうん</rt></ruby>を利用して運ばれた大豆などを原料に、「しょうゆづくり」がさかんになった<ruby>千葉県<rt>ちばけん</rt></ruby>の市はどこでしょう？",
+                choices: [
+                    "<ruby>野田市<rt>のだし</rt></ruby>（および<ruby>銚子市<rt>ちょうしし</rt></ruby>）",
+                    "<ruby>浦安市<rt>うらやすし</rt></ruby>",
+                    "<ruby>君津市<rt>きみつし</rt></ruby>",
+                    "<ruby>成田市<rt>なりたし</rt></ruby>"
+                ],
+                answerIndex: 0,
+                explanation: "<ruby>江戸川<rt>えどがわ</rt></ruby>と<ruby>利根川<rt>とねがわ</rt></ruby>にはさまれた<ruby>野田市<rt>のだし</rt></ruby>や、<ruby>河口<rt>かこう</rt></ruby>の<ruby>銚子市<rt>ちょうしし</rt></ruby>はしょうゆづくりで有名な都市です。"
+            },
+            {
+                id: "chiba_8",
+                round: "ROUND_8",
+                roundLabel: "第8回",
+                pref: "千葉県",
+                prefRuby: "<ruby>千葉県<rt>ちばけん</rt></ruby>",
+                category: "<ruby>歴史<rt>れきし</rt></ruby>",
+                question: "もともと<ruby>東京湾<rt>とうきょうわん</rt></ruby>に<ruby>注<rt>そそ</rt></ruby>いでいた<ruby>利根川<rt>とねがわ</rt></ruby>が、たびたび<ruby>洪水<rt>こうずい</rt></ruby>を起こしたため、<ruby>江戸時代<rt>えどじだい</rt></ruby>に<ruby>太平洋<rt>たいへいよう</rt></ruby>側へ流れを変える工事を<ruby>指示<rt>しじ</rt></ruby>した人物はだれでしょう？",
+                choices: [
+                    "<ruby>徳川家康<rt>とくがわいえやす</rt></ruby>",
+                    "<ruby>源義仲<rt>みなもとのよしなか</rt></ruby>",
+                    "<ruby>北条早雲<rt>ほうじょうそううん</rt></ruby>",
+                    "<ruby>田中正造<rt>たなかしょうぞう</rt></ruby>"
+                ],
+                answerIndex: 0,
+                explanation: "<ruby>徳川家康<rt>とくがわいえやす</rt></ruby>が<ruby>利根川<rt>とねがわ</rt></ruby>（別名：<ruby>坂東太郎<rt>ばんどうたろう</rt></ruby>）の流れを東へ動かす工事を<ruby>指示<rt>しじ</rt></ruby>したことで、船で荷物を運ぶ通り道にあたる<ruby>佐原<rt>さわら</rt></ruby>（<ruby>香取市<rt>かとりし</rt></ruby>）などで<ruby>商業<rt>しょうぎょう</rt></ruby>がさかんになりました。"
+            },
+            {
+                id: "chiba_9",
+                round: "ROUND_8",
+                roundLabel: "第8回",
+                pref: "千葉県",
+                prefRuby: "<ruby>千葉県<rt>ちばけん</rt></ruby>",
+                category: "<ruby>地形<rt>ちけい</rt></ruby>",
+                question: "<ruby>千葉県<rt>ちばけん</rt></ruby>の南部に大きく突き出ており、<ruby>太平洋<rt>たいへいよう</rt></ruby>と<ruby>東京湾<rt>とうきょうわん</rt></ruby>に囲まれた半島は何でしょう？",
+                choices: [
+                    "<ruby>房総半島<rt>ぼうそうはんとう</rt></ruby>",
+                    "<ruby>三浦半島<rt>みうらはんとう</rt></ruby>",
+                    "<ruby>伊豆半島<rt>いずはんとう</rt></ruby>",
+                    "<ruby>能登半島<rt>のとはんとう</rt></ruby>"
+                ],
+                answerIndex: 0,
+                explanation: "<ruby>千葉県<rt>ちばけん</rt></ruby>には大きな<ruby>房総半島<rt>ぼうそうはんとう</rt></ruby>があり、周囲の海では干拓も行われました。"
+            },
+            {
+                id: "chiba_10",
+                round: "ROUND_8",
+                roundLabel: "第8回",
+                pref: "千葉県",
+                prefRuby: "<ruby>千葉県<rt>ちばけん</rt></ruby>",
+                category: "<ruby>都道府県図<rt>とどうふけんず</rt></ruby>かん",
+                question: "<ruby>千葉県<rt>ちばけん</rt></ruby>の「<ruby>県の花<rt>けんのはな</rt></ruby>」であり、<ruby>千葉県<rt>ちばけん</rt></ruby>が<ruby>食用<rt>しょくよう</rt></ruby>の<ruby>収穫量<rt>しゅうかくりょう</rt></ruby>日本一でもある花は何でしょう？",
+                choices: [
+                    "ナノハナ",
+                    "バラ",
+                    "ソメイヨシノ",
+                    "スイセン"
+                ],
+                answerIndex: 0,
+                explanation: "<ruby>千葉県<rt>ちばけん</rt></ruby>の<ruby>県の花<rt>けんのはな</rt></ruby>は「ナノハナ」です。<ruby>食用<rt>しょくよう</rt></ruby>のナノハナの<ruby>収穫量<rt>しゅうかくりょう</rt></ruby>も日本一です。"
+            },
+
+            // ==========================================
+            // 第9回：栃木県（10問）p.33, p.34
+            // ==========================================
+            {
+                id: "tochigi_1",
+                round: "ROUND_9",
+                roundLabel: "第9回",
+                pref: "栃木県",
+                prefRuby: "<ruby>栃木県<rt>とちぎけん</rt></ruby>",
+                category: "<ruby>県庁所在地<rt>けんちょうしょざいち</rt></ruby>・<ruby>名産<rt>めいさん</rt></ruby>",
+                question: "ぎょうざのお店がたくさんあることで有名な、<ruby>栃木県<rt>とちぎけん</rt></ruby>の<ruby>県庁所在地<rt>けんちょうしょざいち</rt></ruby>はどこでしょう？",
+                choices: [
+                    "<ruby>宇都宮市<rt>うつのみやし</rt></ruby>",
+                    "<ruby>日光市<rt>にっこうし</rt></ruby>",
+                    "<ruby>足利市<rt>あしかがし</rt></ruby>",
+                    "<ruby>小山市<rt>おやまし</rt></ruby>"
+                ],
+                answerIndex: 0,
+                explanation: "<ruby>栃木県<rt>とちぎけん</rt></ruby>の<ruby>県庁所在地<rt>けんちょうしょざいち</rt></ruby>は<ruby>宇都宮市<rt>うつのみやし</rt></ruby>です。<ruby>県章<rt>けんしょう</rt></ruby>は「<ruby>栃<rt>とち</rt></ruby>」の漢字をくずしてイラスト化したものです。"
+            },
+            {
+                id: "tochigi_2",
+                round: "ROUND_9",
+                roundLabel: "第9回",
+                pref: "栃木県",
+                prefRuby: "<ruby>栃木県<rt>とちぎけん</rt></ruby>",
+                category: "<ruby>農業<rt>のうぎょう</rt></ruby>",
+                question: "<ruby>栃木県<rt>とちぎけん</rt></ruby>が長年にわたって<ruby>収穫量<rt>しゅうかくりょう</rt></ruby>日本一をほこり、「とちおとめ」や「スカイベリー」などの<ruby>品種<rt>ひんしゅ</rt></ruby>が有名なくだものは何でしょう？",
+                choices: [
+                    "いちご",
+                    "メロン",
+                    "<ruby>日本<rt>にほん</rt></ruby>なし",
+                    "ぶどう"
+                ],
+                answerIndex: 0,
+                explanation: "<ruby>栃木県<rt>とちぎけん</rt></ruby>はいちごの<ruby>収穫量<rt>しゅうかくりょう</rt></ruby>が日本一です。"
+            },
+            {
+                id: "tochigi_3",
+                round: "ROUND_9",
+                roundLabel: "第9回",
+                pref: "栃木県",
+                prefRuby: "<ruby>栃木県<rt>とちぎけん</rt></ruby>",
+                category: "<ruby>農業<rt>のうぎょう</rt></ruby>・<ruby>地形<rt>ちけい</rt></ruby>",
+                question: "<ruby>涼<rt>すず</rt></ruby>しい気候と広い土地にめぐまれ、<ruby>酪農<rt>らくのう</rt></ruby>がさかんでしぼりたての<ruby>牛乳<rt>ぎゅうにゅう</rt></ruby>をもとにした<ruby>乳製品<rt>にゅうせいひん</rt></ruby>づくりが有名な<ruby>栃木県<rt>とちぎけん</rt></ruby>北部の地域はどこでしょう？",
+                choices: [
+                    "<ruby>那須野ヶ原<rt>なすのがはら</rt></ruby>",
+                    "<ruby>牧之原<rt>まきのはら</rt></ruby>",
+                    "<ruby>下総台地<rt>しもうさだいち</rt></ruby>",
+                    "<ruby>甲府盆地<rt>こうふぼんち</rt></ruby>"
+                ],
+                answerIndex: 0,
+                explanation: "<ruby>那須野ヶ原<rt>なすのがはら</rt></ruby>では<ruby>酪農<rt>らくのう</rt></ruby>がさかんで、生乳や乳製品の生産が有名です。"
+            },
+            {
+                id: "tochigi_4",
+                round: "ROUND_9",
+                roundLabel: "第9回",
+                pref: "栃木県",
+                prefRuby: "<ruby>栃木県<rt>とちぎけん</rt></ruby>",
+                category: "<ruby>歴史<rt>れきし</rt></ruby>・<ruby>世界遺産<rt>せかいいさん</rt></ruby>",
+                question: "<ruby>日光市<rt>にっこうし</rt></ruby>にある、<ruby>江戸幕府<rt>えどばくふ</rt></ruby>を開いた<ruby>徳川家康<rt>とくがわいえやす</rt></ruby>をまつった神社で、「<ruby>陽明門<rt>ようめいもん</rt></ruby>」や「<ruby>三猿<rt>さんざる</rt></ruby>」の<ruby>彫刻<rt>ちょうこく</rt></ruby>で有名な<ruby>世界文化遺産<rt>せかいぶんかいさん</rt></ruby>はどこでしょう？",
+                choices: [
+                    "<ruby>日光東照宮<rt>にっこうとうしょうぐう</rt></ruby>",
+                    "<ruby>鹿島神宮<rt>かしまじんぐう</rt></ruby>",
+                    "<ruby>香取神宮<rt>かとりじんぐう</rt></ruby>",
+                    "<ruby>永平寺<rt>えいへいじ</rt></ruby>"
+                ],
+                answerIndex: 0,
+                explanation: "<ruby>日光東照宮<rt>にっこうとうしょうぐう</rt></ruby>は「<ruby>見<rt>み</rt></ruby>ざる・<ruby>聞<rt>き</rt></ruby>かざる・<ruby>言<rt>い</rt></ruby>わざる」を表す<ruby>三猿<rt>さんざる</rt></ruby>の<ruby>彫刻<rt>ちょうこく</rt></ruby>などでも知られています。"
+            },
+            {
+                id: "tochigi_5",
+                round: "ROUND_9",
+                roundLabel: "第9回",
+                pref: "栃木県",
+                prefRuby: "<ruby>栃木県<rt>とちぎけん</rt></ruby>",
+                category: "<ruby>地形<rt>ちけい</rt></ruby>・<ruby>自然<rt>しぜん</rt></ruby>",
+                question: "日本一湖面の<ruby>標高<rt>ひょうこう</rt></ruby>が高い<ruby>中禅寺湖<rt>ちゅうぜんじこ</rt></ruby>から流れ出た川がつくる、<ruby>迫力<rt>はくりょく</rt></ruby>のある滝は何でしょう？",
+                choices: [
+                    "<ruby>華厳の滝<rt>けごんのたき</rt></ruby>",
+                    "<ruby>那智の滝<rt>なちのたき</rt></ruby>",
+                    "<ruby>袋田の滝<rt>ふくろだのたき</rt></ruby>",
+                    "<ruby>白糸の滝<rt>しらいとのたき</rt></ruby>"
+                ],
+                answerIndex: 0,
+                explanation: "<ruby>男体山<rt>なんたいさん</rt></ruby>のふもとの<ruby>中禅寺湖<rt>ちゅうぜんじこ</rt></ruby>から流れ落ちる「<ruby>華厳の滝<rt>けごんのたき</rt></ruby>」が有名です。"
+            },
+            {
+                id: "tochigi_6",
+                round: "ROUND_9",
+                roundLabel: "第9回",
+                pref: "栃木県",
+                prefRuby: "<ruby>栃木県<rt>とちぎけん</rt></ruby>",
+                category: "<ruby>産業<rt>さんぎょう</rt></ruby>・<ruby>名産<rt>めいさん</rt></ruby>",
+                question: "<ruby>壬生町<rt>みぶまち</rt></ruby>を中心に<ruby>栽培<rt>さいばい</rt></ruby>される、かんぴょう巻きで知られる「かんぴょう」の<ruby>原料<rt>げんりょう</rt></ruby>となる植物は何でしょう？",
+                choices: [
+                    "ユウガオ（の実）",
+                    "こんにゃくいも",
+                    "れんこん",
+                    "らっかせい"
+                ],
+                answerIndex: 0,
+                explanation: "かんぴょうは「ユウガオ」の実を薄くひものように切って<ruby>乾燥<rt>かんそう</rt></ruby>させたもので、<ruby>栃木県<rt>とちぎけん</rt></ruby>が全国の生産量のほとんどをしめています。また、<ruby>壬生町<rt>みぶまち</rt></ruby>は「おもちゃのまち」でもあります。"
+            },
+            {
+                id: "tochigi_7",
+                round: "ROUND_9",
+                roundLabel: "第9回",
+                pref: "栃木県",
+                prefRuby: "<ruby>栃木県<rt>とちぎけん</rt></ruby>",
+                category: "<ruby>産業<rt>さんぎょう</rt></ruby>・<ruby>工芸<rt>こうげい</rt></ruby>",
+                question: "<ruby>粘土<rt>ねんど</rt></ruby>を焼いていろいろな<ruby>器<rt>うつわ</rt></ruby>がつくられ、年2回の<ruby>陶器市<rt>とうきいち</rt></ruby>が開かれる<ruby>栃木県<rt>とちぎけん</rt></ruby>の町はどこでしょう？",
+                choices: [
+                    "<ruby>益子町<rt>ましこまち</rt></ruby>（<ruby>益子焼<rt>ましこやき</rt></ruby>）",
+                    "<ruby>輪島市<rt>わじまし</rt></ruby>（<ruby>輪島塗<rt>わじまぬり</rt></ruby>）",
+                    "<ruby>鯖江市<rt>さばえし</rt></ruby>（めがね）",
+                    "<ruby>下仁田町<rt>しもにたまち</rt></ruby>（ねぎ）"
+                ],
+                answerIndex: 0,
+                explanation: "<ruby>益子町<rt>ましこまち</rt></ruby>の「<ruby>益子焼<rt>ましこやき</rt></ruby>」が有名です。また、<ruby>足利市<rt>あしかがし</rt></ruby>には日本で最も古い学校の1つとされる「<ruby>足利学校<rt>あしかががっこう</rt></ruby>」があります。"
+            },
+            {
+                id: "tochigi_8",
+                round: "ROUND_9",
+                roundLabel: "第9回",
+                pref: "栃木県",
+                prefRuby: "<ruby>栃木県<rt>とちぎけん</rt></ruby>",
+                category: "<ruby>歴史<rt>れきし</rt></ruby>・<ruby>公害<rt>こうがい</rt></ruby>",
+                question: "10円玉などの<ruby>原料<rt>げんりょう</rt></ruby>になる「<ruby>銅<rt>どう</rt></ruby>」がとれた<ruby>足尾銅山<rt>あしおどうざん</rt></ruby>から<ruby>鉱毒<rt>こうどく</rt></ruby>が流れ出し、<ruby>汚染<rt>おせん</rt></ruby>されてしまった川はどれでしょう？",
+                choices: [
+                    "<ruby>渡良瀬川<rt>わたらせがわ</rt></ruby>",
+                    "<ruby>鬼怒川<rt>きぬがわ</rt></ruby>",
+                    "<ruby>那珂川<rt>なかがわ</rt></ruby>",
+                    "<ruby>富士川<rt>ふじかわ</rt></ruby>"
+                ],
+                answerIndex: 0,
+                explanation: "<ruby>足尾銅山<rt>あしおどうざん</rt></ruby>から出た<ruby>鉱毒<rt>こうどく</rt></ruby>が<ruby>渡良瀬川<rt>わたらせがわ</rt></ruby>に流れ出し、魚が死んだり作物が育たなくなったりする大きな<ruby>公害<rt>こうがい</rt></ruby>が起きました。"
+            },
+            {
+                id: "tochigi_9",
+                round: "ROUND_9",
+                roundLabel: "第9回",
+                pref: "栃木県",
+                prefRuby: "<ruby>栃木県<rt>とちぎけん</rt></ruby>",
+                category: "<ruby>歴史<rt>れきし</rt></ruby>・<ruby>人物<rt>じんぶつ</rt></ruby>",
+                question: "<ruby>足尾銅山鉱毒事件<rt>あしおどうざんこうどくじけん</rt></ruby>の解決に取り組み、人々の<ruby>苦<rt>くる</rt></ruby>しみを伝えるために<ruby>天皇<rt>てんのう</rt></ruby>に<ruby>直接<rt>ちょくせつ</rt></ruby><ruby>訴<rt>うった</rt></ruby>えた（<ruby>直訴<rt>じきそ</rt></ruby>した）人物はだれでしょう？",
+                choices: [
+                    "<ruby>田中正造<rt>たなかしょうぞう</rt></ruby>",
+                    "<ruby>増永五左衛門<rt>ますながござえもん</rt></ruby>",
+                    "<ruby>徳川斉昭<rt>とくがわなりあき</rt></ruby>",
+                    "<ruby>前田利家<rt>まえだとしいえ</rt></ruby>"
+                ],
+                answerIndex: 0,
+                explanation: "<ruby>国会議員<rt>こっかいぎいん</rt></ruby>だった<ruby>田中正造<rt>たなかしょうぞう</rt></ruby>は<ruby>鉱毒<rt>こうどく</rt></ruby>の被害を<ruby>天皇<rt>てんのう</rt></ruby>に<ruby>直訴<rt>じきそ</rt></ruby>し、その後、<ruby>渡良瀬川<rt>わたらせがわ</rt></ruby>に<ruby>遊水地<rt>ゆうすいち</rt></ruby>がつくられました。"
+            },
+            {
+                id: "tochigi_10",
+                round: "ROUND_9",
+                roundLabel: "第9回",
+                pref: "栃木県",
+                prefRuby: "<ruby>栃木県<rt>とちぎけん</rt></ruby>",
+                category: "<ruby>都道府県図<rt>とどうふけんず</rt></ruby>かん",
+                question: "<ruby>栃木県<rt>とちぎけん</rt></ruby>の「<ruby>県の花<rt>けんのはな</rt></ruby>」であり、きびしい冬をこしたあとすぐに花をさかせる花は何でしょう？",
+                choices: [
+                    "ヤシオツツジ",
+                    "レンゲツツジ",
+                    "バラ",
+                    "クロユリ"
+                ],
+                answerIndex: 0,
+                explanation: "<ruby>栃木県<rt>とちぎけん</rt></ruby>の<ruby>県の花<rt>けんのはな</rt></ruby>は「ヤシオツツジ」です。"
+            },
+
+            // ==========================================
+            // 第9回：群馬県（10問）p.35, p.36
+            // ==========================================
+            {
+                id: "gunma_1",
+                round: "ROUND_9",
+                roundLabel: "第9回",
+                pref: "群馬県",
+                prefRuby: "<ruby>群馬県<rt>ぐんまけん</rt></ruby>",
+                category: "<ruby>県庁所在地<rt>けんちょうしょざいち</rt></ruby>・<ruby>県章<rt>けんしょう</rt></ruby>",
+                question: "<ruby>群馬県<rt>ぐんまけん</rt></ruby>の<ruby>県庁所在地<rt>けんちょうしょざいち</rt></ruby>はどこでしょう？",
+                choices: [
+                    "<ruby>前橋市<rt>まえばしし</rt></ruby>",
+                    "<ruby>高崎市<rt>たかさきし</rt></ruby>",
+                    "<ruby>太田市<rt>おおたし</rt></ruby>",
+                    "<ruby>桐生市<rt>きりゅうし</rt></ruby>"
+                ],
+                answerIndex: 0,
+                explanation: "<ruby>県庁所在地<rt>けんちょうしょざいち</rt></ruby>は<ruby>前橋市<rt>まえばしし</rt></ruby>です。<ruby>県章<rt>けんしょう</rt></ruby>は「<ruby>群<rt>ぐん</rt></ruby>」の文字のまわりに<ruby>赤城山<rt>あかぎさん</rt></ruby>・<ruby>榛名山<rt>はるなさん</rt></ruby>・<ruby>妙義山<rt>みょうぎさん</rt></ruby>の山々が描かれています。"
+            },
+            {
+                id: "gunma_2",
+                round: "ROUND_9",
+                roundLabel: "第9回",
+                pref: "群馬県",
+                prefRuby: "<ruby>群馬県<rt>ぐんまけん</rt></ruby>",
+                category: "<ruby>歴史<rt>れきし</rt></ruby>・<ruby>世界遺産<rt>せかいいさん</rt></ruby>",
+                question: "1872年に国によってつくられた日本で最初の<ruby>近代的<rt>きんだいてき</rt></ruby>な<ruby>製糸<rt>せいし</rt></ruby>工場で、2014年に<ruby>世界文化遺産<rt>せかいぶんかいさん</rt></ruby>に登録されたのはどこでしょう？",
+                choices: [
+                    "<ruby>富岡製糸場<rt>とみおかせいしじょう</rt></ruby>",
+                    "<ruby>鉄道博物館<rt>てつどうはくぶつかん</rt></ruby>",
+                    "<ruby>小河内<rt>おごうち</rt></ruby>ダム",
+                    "<ruby>足利学校<rt>あしかががっこう</rt></ruby>"
+                ],
+                answerIndex: 0,
+                explanation: "<ruby>富岡市<rt>とみおかし</rt></ruby>にある「<ruby>富岡製糸場<rt>とみおかせいしじょう</rt></ruby>」は、<ruby>蚕<rt>かいこ</rt></ruby>のまゆから生糸をつくる工場として<ruby>世界文化遺産<rt>せかいぶんかいさん</rt></ruby>に登録されました。"
+            },
+            {
+                id: "gunma_3",
+                round: "ROUND_9",
+                roundLabel: "第9回",
+                pref: "群馬県",
+                prefRuby: "<ruby>群馬県<rt>ぐんまけん</rt></ruby>",
+                category: "<ruby>農業<rt>のうぎょう</rt></ruby>",
+                question: "<ruby>群馬県<rt>ぐんまけん</rt></ruby>が全国の<ruby>収穫量<rt>しゅうかくりょう</rt></ruby>のほとんどをしめ、そのままでは食べられないため<ruby>加工<rt>かこう</rt></ruby>して食べる「<ruby>工芸作物<rt>こうげいさくもつ</rt></ruby>」の代表はどれでしょう？",
+                choices: [
+                    "こんにゃくいも",
+                    "らっかせい",
+                    "れんこん",
+                    "すいか"
+                ],
+                answerIndex: 0,
+                explanation: "<ruby>加工<rt>かこう</rt></ruby>して食べられるようになる作物を「<ruby>工芸作物<rt>こうげいさくもつ</rt></ruby>」とよび、こんにゃくの<ruby>原料<rt>げんりょう</rt></ruby>である「こんにゃくいも」は<ruby>群馬県<rt>ぐんまけん</rt></ruby>が日本一です。"
+            },
+            {
+                id: "gunma_4",
+                round: "ROUND_9",
+                roundLabel: "第9回",
+                pref: "群馬県",
+                prefRuby: "<ruby>群馬県<rt>ぐんまけん</rt></ruby>",
+                category: "<ruby>農業<rt>のうぎょう</rt></ruby>",
+                question: "<ruby>浅間山<rt>あさまやま</rt></ruby>ろくの<ruby>嬬恋村<rt>つまごいむら</rt></ruby>などの<ruby>涼<rt>すず</rt></ruby>しい<ruby>高原<rt>こうげん</rt></ruby>で夏に多く<ruby>栽培<rt>さいばい</rt></ruby>される野菜と、熱を通すと甘くなる<ruby>下仁田町<rt>しもにたまち</rt></ruby>の名産野菜の組み合わせはどれでしょう？",
+                choices: [
+                    "キャベツ ／ <ruby>下仁田<rt>しもにた</rt></ruby>ねぎ",
+                    "ほうれんそう ／ <ruby>深谷<rt>ふかや</rt></ruby>ねぎ",
+                    "レタス ／ <ruby>岩槻<rt>いわつき</rt></ruby>ねぎ",
+                    "トマト ／ <ruby>九条<rt>くじょう</rt></ruby>ねぎ"
+                ],
+                answerIndex: 0,
+                explanation: "<ruby>嬬恋村<rt>つまごいむら</rt></ruby>の<ruby>高原<rt>こうげん</rt></ruby>キャベツと、<ruby>下仁田町<rt>しもにたまち</rt></ruby>の<ruby>下仁田<rt>しもにた</rt></ruby>ねぎが有名です。"
+            },
+            {
+                id: "gunma_5",
+                round: "ROUND_9",
+                roundLabel: "第9回",
+                pref: "群馬県",
+                prefRuby: "<ruby>群馬県<rt>ぐんまけん</rt></ruby>",
+                category: "<ruby>観光<rt>かんこう</rt></ruby>・<ruby>工芸<rt>こうげい</rt></ruby>",
+                question: "中心地にある「<ruby>湯畑<rt>ゆばたけ</rt></ruby>」が有名な<ruby>温泉地<rt>おんせんち</rt></ruby>と、だるまづくりがさかんな市の組み合わせはどれでしょう？",
+                choices: [
+                    "<ruby>草津温泉<rt>くさつおんせん</rt></ruby> ／ <ruby>高崎市<rt>たかさきし</rt></ruby>",
+                    "<ruby>鬼怒川温泉<rt>きぬがわおんせん</rt></ruby> ／ <ruby>前橋市<rt>まえばしし</rt></ruby>",
+                    "<ruby>箱根温泉<rt>はこねおんせん</rt></ruby> ／ <ruby>桐生市<rt>きりゅうし</rt></ruby>",
+                    "<ruby>熱海温泉<rt>あたみおんせん</rt></ruby> ／ <ruby>太田市<rt>おおたし</rt></ruby>"
+                ],
+                answerIndex: 0,
+                explanation: "<ruby>草津温泉<rt>くさつおんせん</rt></ruby>の<ruby>湯畑<rt>ゆばたけ</rt></ruby>や、<ruby>高崎市<rt>たかさきし</rt></ruby>の「<ruby>高崎<rt>たかさき</rt></ruby>だるま」が有名です。"
+            },
+            {
+                id: "gunma_6",
+                round: "ROUND_9",
+                roundLabel: "第9回",
+                pref: "群馬県",
+                prefRuby: "<ruby>群馬県<rt>ぐんまけん</rt></ruby>",
+                category: "<ruby>工芸<rt>こうげい</rt></ruby>・<ruby>交通<rt>こうつう</rt></ruby>",
+                question: "伝統的な<ruby>絹織物<rt>きぬおりもの</rt></ruby>で有名な市と、「めがね<ruby>橋<rt>ばし</rt></ruby>」とよばれるレンガ製のアーチ橋がある峠の組み合わせはどれでしょう？",
+                choices: [
+                    "<ruby>桐生市<rt>きりゅうし</rt></ruby>（<ruby>桐生織<rt>きりゅうおり</rt></ruby>） ／ <ruby>碓氷峠<rt>うすいとうげ</rt></ruby>",
+                    "<ruby>太田市<rt>おおたし</rt></ruby> ／ <ruby>倶利伽羅峠<rt>くりからとうげ</rt></ruby>",
+                    "<ruby>高崎市<rt>たかさきし</rt></ruby> ／ <ruby>箱根峠<rt>はこねとうげ</rt></ruby>",
+                    "<ruby>前橋市<rt>まえばしし</rt></ruby> ／ <ruby>天城峠<rt>あまぎとうげ</rt></ruby>"
+                ],
+                answerIndex: 0,
+                explanation: "<ruby>桐生市<rt>きりゅうし</rt></ruby>は「<ruby>桐生織<rt>きりゅうおり</rt></ruby>」、<ruby>碓氷峠<rt>うすいとうげ</rt></ruby>はレンガ製のアーチ橋「めがね<ruby>橋<rt>ばし</rt></ruby>」で有名です。"
+            },
+            {
+                id: "gunma_7",
+                round: "ROUND_9",
+                roundLabel: "第9回",
+                pref: "群馬県",
+                prefRuby: "<ruby>群馬県<rt>ぐんまけん</rt></ruby>",
+                category: "<ruby>歴史<rt>れきし</rt></ruby>",
+                question: "みどり<ruby>市<rt>し</rt></ruby>にある「<ruby>岩宿遺跡<rt>いわじゅくいせき</rt></ruby>」の<ruby>発見<rt>はっけん</rt></ruby>によって、日本にどのような時代があったことが明らかになったでしょう？",
+                choices: [
+                    "<ruby>旧石器時代<rt>きゅうせっきじだい</rt></ruby>",
+                    "<ruby>縄文時代<rt>じょうもんじだい</rt></ruby>",
+                    "<ruby>弥生時代<rt>やよいじだい</rt></ruby>",
+                    "<ruby>古墳時代<rt>こふんじだい</rt></ruby>"
+                ],
+                answerIndex: 0,
+                explanation: "<ruby>岩宿遺跡<rt>いわじゅくいせき</rt></ruby>で打製石器がみつかったことで、日本にも「<ruby>旧石器時代<rt>きゅうせっきじだい</rt></ruby>」があったことが明らかになりました。"
+            },
+            {
+                id: "gunma_8",
+                round: "ROUND_9",
+                roundLabel: "第9回",
+                pref: "群馬県",
+                prefRuby: "<ruby>群馬県<rt>ぐんまけん</rt></ruby>",
+                category: "<ruby>気候<rt>きこう</rt></ruby>・<ruby>くらし<rt>くらし</rt></ruby>",
+                question: "冬に<ruby>越後山脈<rt>えちごさんみゃく</rt></ruby>を越えて<ruby>群馬県<rt>ぐんまけん</rt></ruby>に吹きこむ<ruby>乾燥<rt>かんそう</rt></ruby>した冷たい<ruby>季節風<rt>きせつふう</rt></ruby>を「からっ<ruby>風<rt>かぜ</rt></ruby>」といいますが、この風から家や<ruby>畑<rt>はたけ</rt></ruby>を守るために家の周りにつくられた<ruby>防風林<rt>ぼうふうりん</rt></ruby>を何というでしょう？",
+                choices: [
+                    "<ruby>屋敷森<rt>やしきもり</rt></ruby>",
+                    "<ruby>三保の松原<rt>みほのまつばら</rt></ruby>",
+                    "<ruby>兼六園<rt>けんろくえん</rt></ruby>",
+                    "<ruby>水郷<rt>すいごう</rt></ruby>"
+                ],
+                answerIndex: 0,
+                explanation: "冬に北西から吹く「からっ<ruby>風<rt>かぜ</rt></ruby>」の対策として、家や<ruby>畑<rt>はたけ</rt></ruby>の周りには「<ruby>屋敷森<rt>やしきもり</rt></ruby>」とよばれる<ruby>防風林<rt>ぼうふうりん</rt></ruby>がつくられています。"
+            },
+            {
+                id: "gunma_9",
+                round: "ROUND_9",
+                roundLabel: "第9回",
+                pref: "群馬県",
+                prefRuby: "<ruby>群馬県<rt>ぐんまけん</rt></ruby>",
+                category: "<ruby>文化<rt>ぶんか</rt></ruby>",
+                question: "子供たちが遊びを通して<ruby>群馬県<rt>ぐんまけん</rt></ruby>のふるさとについて学べるようにつくられた郷土かるたを何というでしょう？",
+                choices: [
+                    "<ruby>上毛<rt>じょうもう</rt></ruby>かるた",
+                    "<ruby>百人一首<rt>ひゃくにんいっしゅ</rt></ruby>",
+                    "<ruby>小江戸<rt>こえど</rt></ruby>かるた",
+                    "<ruby>越前<rt>えちぜん</rt></ruby>かるた"
+                ],
+                answerIndex: 0,
+                explanation: "「<ruby>上毛<rt>じょうもう</rt></ruby>かるた」には、<ruby>群馬県<rt>ぐんまけん</rt></ruby>の名産品や<ruby>歴史<rt>れきし</rt></ruby>・自然がよみこまれています。"
+            },
+            {
+                id: "gunma_10",
+                round: "ROUND_9",
+                roundLabel: "第9回",
+                pref: "群馬県",
+                prefRuby: "<ruby>群馬県<rt>ぐんまけん</rt></ruby>",
+                category: "<ruby>都道府県図<rt>とどうふけんず</rt></ruby>かん",
+                question: "<ruby>群馬県<rt>ぐんまけん</rt></ruby>の「<ruby>県の花<rt>けんのはな</rt></ruby>」であり、夏の始めにオレンジ色の花をさかせる花は何でしょう？",
+                choices: [
+                    "レンゲツツジ",
+                    "ヤシオツツジ",
+                    "ツツジ",
+                    "ナノハナ"
+                ],
+                answerIndex: 0,
+                explanation: "<ruby>群馬県<rt>ぐんまけん</rt></ruby>の<ruby>県の花<rt>けんのはな</rt></ruby>はオレンジ色の花をさかせる「レンゲツツジ」です。"
+            },
+
+            // ==========================================
+            // 第10回：石川県（10問）p.37, p.38
+            // ==========================================
+            {
+                id: "ishikawa_1",
+                round: "ROUND_10",
+                roundLabel: "第10回",
+                pref: "石川県",
+                prefRuby: "<ruby>石川県<rt>いしかわけん</rt></ruby>",
+                category: "<ruby>県庁所在地<rt>けんちょうしょざいち</rt></ruby>・<ruby>歴史<rt>れきし</rt></ruby>",
+                question: "<ruby>石川県<rt>いしかわけん</rt></ruby>の<ruby>県庁所在地<rt>けんちょうしょざいち</rt></ruby>で、<ruby>加賀藩主<rt>かがはんしゅ</rt></ruby>の<ruby>前田家<rt>まえだけ</rt></ruby>がつくりあげた<ruby>日本三名園<rt>にほんさんめいえん</rt></ruby>の1つ「<ruby>兼六園<rt>けんろくえん</rt></ruby>」がある市はどこでしょう？",
+                choices: [
+                    "<ruby>金沢市<rt>かなざわし</rt></ruby>",
+                    "<ruby>輪島市<rt>わじまし</rt></ruby>",
+                    "<ruby>小松市<rt>こまつし</rt></ruby>",
+                    "<ruby>白山市<rt>はくさんし</rt></ruby>"
+                ],
+                answerIndex: 0,
+                explanation: "<ruby>金沢市<rt>かなざわし</rt></ruby>には「<ruby>兼六園<rt>けんろくえん</rt></ruby>」があり、<ruby>城下町<rt>じょうかまち</rt></ruby>を守るための作戦として、市内の道は<ruby>迷路<rt>めいろ</rt></ruby>のようになっています。"
+            },
+            {
+                id: "ishikawa_2",
+                round: "ROUND_10",
+                roundLabel: "第10回",
+                pref: "石川県",
+                prefRuby: "<ruby>石川県<rt>いしかわけん</rt></ruby>",
+                category: "<ruby>産業<rt>さんぎょう</rt></ruby>・<ruby>工芸<rt>こうげい</rt></ruby>",
+                question: "<ruby>能登半島<rt>のとはんとう</rt></ruby>の<ruby>輪島市<rt>わじまし</rt></ruby>を中心に生産されている、木のおわんなどにうるしを何度もぬり重ねてつくる伝統的な「<ruby>漆器<rt>しっき</rt></ruby>」は何でしょう？",
+                choices: [
+                    "<ruby>輪島塗<rt>わじまぬり</rt></ruby>",
+                    "<ruby>九谷焼<rt>くたにやき</rt></ruby>",
+                    "<ruby>加賀友禅<rt>かがゆうぜん</rt></ruby>",
+                    "<ruby>益子焼<rt>ましこやき</rt></ruby>"
+                ],
+                answerIndex: 0,
+                explanation: "<ruby>輪島塗<rt>わじまぬり</rt></ruby>は<ruby>職人<rt>しょくにん</rt></ruby>さんたちが高度な技術を使って手作業でつくる<ruby>漆器<rt>しっき</rt></ruby>です。"
+            },
+            {
+                id: "ishikawa_3",
+                round: "ROUND_10",
+                roundLabel: "第10回",
+                pref: "石川県",
+                prefRuby: "<ruby>石川県<rt>いしかわけん</rt></ruby>",
+                category: "<ruby>産業<rt>さんぎょう</rt></ruby>・<ruby>工芸<rt>こうげい</rt></ruby>",
+                question: "<ruby>江戸時代<rt>えどじだい</rt></ruby>につくられ始め、あざやかな<ruby>上絵付<rt>うわえつ</rt></ruby>けを特徴とする<ruby>石川県<rt>いしかわけん</rt></ruby>の「<ruby>陶磁器<rt>とうじき</rt></ruby>（焼き物）」は何でしょう？",
+                choices: [
+                    "<ruby>九谷焼<rt>くたにやき</rt></ruby>",
+                    "<ruby>益子焼<rt>ましこやき</rt></ruby>",
+                    "<ruby>輪島塗<rt>わじまぬり</rt></ruby>",
+                    "<ruby>結城紬<rt>ゆうきつむぎ</rt></ruby>"
+                ],
+                answerIndex: 0,
+                explanation: "<ruby>九谷焼<rt>くたにやき</rt></ruby>は<ruby>陶石<rt>とうせき</rt></ruby>をくだいて固めたものにうわぐすりを塗ってつくった「<ruby>陶磁器<rt>とうじき</rt></ruby>」です。"
+            },
+            {
+                id: "ishikawa_4",
+                round: "ROUND_10",
+                roundLabel: "第10回",
+                pref: "石川県",
+                prefRuby: "<ruby>石川県<rt>いしかわけん</rt></ruby>",
+                category: "<ruby>産業<rt>さんぎょう</rt></ruby>・<ruby>工芸<rt>こうげい</rt></ruby>",
+                question: "全国で使われているもののほとんどが<ruby>金沢市<rt>かなざわし</rt></ruby>でつくられている、<ruby>金<rt>きん</rt></ruby>を紙よりはるかにうすくのばしたものは何でしょう？",
+                choices: [
+                    "<ruby>金箔<rt>きんぱく</rt></ruby>",
+                    "<ruby>越前和紙<rt>えちぜんわし</rt></ruby>",
+                    "<ruby>水晶細工<rt>すいしょうざいく</rt></ruby>",
+                    "<ruby>鋳物<rt>いもの</rt></ruby>"
+                ],
+                answerIndex: 0,
+                explanation: "<ruby>金沢市<rt>かなざわし</rt></ruby>は「<ruby>金箔<rt>きんぱく</rt></ruby>」の生産が全国一です。"
+            },
+            {
+                id: "ishikawa_5",
+                round: "ROUND_10",
+                roundLabel: "第10回",
+                pref: "石川県",
+                prefRuby: "<ruby>石川県<rt>いしかわけん</rt></ruby>",
+                category: "<ruby>産業<rt>さんぎょう</rt></ruby>・<ruby>工芸<rt>こうげい</rt></ruby>",
+                question: "<ruby>江戸時代<rt>えどじだい</rt></ruby>に<ruby>京都<rt>きょうと</rt></ruby>からやってきた<ruby>絵師<rt>えし</rt></ruby>によって伝えられ、<ruby>草花<rt>くさばな</rt></ruby>や鳥を使った絵がらが特徴的な<ruby>石川県<rt>いしかわけん</rt></ruby>の染め物は何でしょう？",
+                choices: [
+                    "<ruby>加賀友禅<rt>かがゆうぜん</rt></ruby>",
+                    "<ruby>結城紬<rt>ゆうきつむぎ</rt></ruby>",
+                    "<ruby>桐生織<rt>きりゅうおり</rt></ruby>",
+                    "<ruby>西陣織<rt>にしじんおり</rt></ruby>"
+                ],
+                answerIndex: 0,
+                explanation: "<ruby>草花<rt>くさばな</rt></ruby>や鳥を描いた美しい染め物の「<ruby>加賀友禅<rt>かがゆうぜん</rt></ruby>」が有名です。"
+            },
+            {
+                id: "ishikawa_6",
+                round: "ROUND_10",
+                roundLabel: "第10回",
+                pref: "石川県",
+                prefRuby: "<ruby>石川県<rt>いしかわけん</rt></ruby>",
+                category: "<ruby>伝統的工芸品<rt>でんとうてきこうげいひん</rt></ruby>",
+                question: "国の「<ruby>伝統的工芸品<rt>でんとうてきこうげいひん</rt></ruby>」に登録される条件として、正しくないものはどれでしょう？",
+                choices: [
+                    "すべて最新の機械を使って大量生産されていること",
+                    "作業のうち、大部分が<ruby>手作業<rt>てさぎょう</rt></ruby>であること",
+                    "<ruby>日常的<rt>にちじょうてき</rt></ruby>に使われるものであること",
+                    "昔から使われている<ruby>材料<rt>ざいりょう</rt></ruby>や技術でつくられていること"
+                ],
+                answerIndex: 0,
+                explanation: "<ruby>伝統的工芸品<rt>でんとうてきこうげいひん</rt></ruby>は、大部分が<ruby>手作業<rt>てさぎょう</rt></ruby>であり、昔から受けつがれた技術や<ruby>材料<rt>ざいりょう</rt></ruby>を使ってつくられる日用品であることが条件です。"
+            },
+            {
+                id: "ishikawa_7",
+                round: "ROUND_10",
+                roundLabel: "第10回",
+                pref: "石川県",
+                prefRuby: "<ruby>石川県<rt>いしかわけん</rt></ruby>",
+                category: "<ruby>地形<rt>ちけい</rt></ruby>・<ruby>農業<rt>のうぎょう</rt></ruby>",
+                question: "<ruby>能登半島<rt>のとはんとう</rt></ruby>の海ぞいの急な<ruby>斜面<rt>しゃめん</rt></ruby>を切り開いてつくられた<ruby>階段状<rt>かいだんじょう</rt></ruby>の<ruby>水田<rt>すいでん</rt></ruby>（<ruby>棚田<rt>たなだ</rt></ruby>）で、降った雨をたくわえ<ruby>土砂<rt>どしゃ</rt></ruby>くずれを防ぐ役割もある場所はどこでしょう？",
+                choices: [
+                    "<ruby>白米千枚田<rt>しろよねせんまいだ</rt></ruby>",
+                    "<ruby>牧之原<rt>まきのはら</rt></ruby>",
+                    "<ruby>九十九里浜<rt>くじゅうくりはま</rt></ruby>",
+                    "<ruby>東尋坊<rt>とうじんぼう</rt></ruby>"
+                ],
+                answerIndex: 0,
+                explanation: "<ruby>白米千枚田<rt>しろよねせんまいだ</rt></ruby>は美しい<ruby>棚田<rt>たなだ</rt></ruby>として有名です。また、<ruby>能登半島<rt>のとはんとう</rt></ruby>北部では「<ruby>塩田<rt>えんでん</rt></ruby>」での<ruby>塩<rt>しお</rt></ruby>づくりも行われています。"
+            },
+            {
+                id: "ishikawa_8",
+                round: "ROUND_10",
+                roundLabel: "第10回",
+                pref: "石川県",
+                prefRuby: "<ruby>石川県<rt>いしかわけん</rt></ruby>",
+                category: "<ruby>歴史<rt>れきし</rt></ruby>・<ruby>地理<rt>ちり</rt></ruby>",
+                question: "<ruby>富山県<rt>とやまけん</rt></ruby>との<ruby>県境<rt>けんざかい</rt></ruby>にある峠で、<ruby>源義仲<rt>みなもとのよしなか</rt></ruby>（<ruby>木曾義仲<rt>きそのよしなか</rt></ruby>）が<ruby>平氏<rt>へいし</rt></ruby>と戦った場所として知られるのはどこでしょう？",
+                choices: [
+                    "<ruby>倶利伽羅峠<rt>くりからとうげ</rt></ruby>",
+                    "<ruby>碓氷峠<rt>うすいとうげ</rt></ruby>",
+                    "<ruby>箱根峠<rt>はこねとうげ</rt></ruby>",
+                    "<ruby>天城峠<rt>あまぎとうげ</rt></ruby>"
+                ],
+                answerIndex: 0,
+                explanation: "<ruby>倶利伽羅峠<rt>くりからとうげ</rt></ruby>で<ruby>源義仲<rt>みなもとのよしなか</rt></ruby>が<ruby>平氏<rt>へいし</rt></ruby>と戦いました。"
+            },
+            {
+                id: "ishikawa_9",
+                round: "ROUND_10",
+                roundLabel: "第10回",
+                pref: "石川県",
+                prefRuby: "<ruby>石川県<rt>いしかわけん</rt></ruby>",
+                category: "<ruby>地形<rt>ちけい</rt></ruby>・<ruby>自然<rt>しぜん</rt></ruby>",
+                question: "<ruby>石川県<rt>いしかわけん</rt></ruby>と<ruby>岐阜県<rt>ぎふけん</rt></ruby>にまたがり、古くから人々に<ruby>信仰<rt>しんこう</rt></ruby>されてきた山はどれでしょう？",
+                choices: [
+                    "<ruby>白山<rt>はくさん</rt></ruby>",
+                    "<ruby>立山<rt>たてやま</rt></ruby>",
+                    "<ruby>浅間山<rt>あさまやま</rt></ruby>",
+                    "<ruby>男体山<rt>なんたいさん</rt></ruby>"
+                ],
+                answerIndex: 0,
+                explanation: "<ruby>石川県<rt>いしかわけん</rt></ruby>と<ruby>岐阜県<rt>ぎふけん</rt></ruby>にまたがる「<ruby>白山<rt>はくさん</rt></ruby>」は古くから<ruby>信仰<rt>しんこう</rt></ruby>の対象となってきました。"
+            },
+            {
+                id: "ishikawa_10",
+                round: "ROUND_10",
+                roundLabel: "第10回",
+                pref: "石川県",
+                prefRuby: "<ruby>石川県<rt>いしかわけん</rt></ruby>",
+                category: "<ruby>都道府県図<rt>とどうふけんず</rt></ruby>かん",
+                question: "<ruby>石川県<rt>いしかわけん</rt></ruby>の「<ruby>県の花<rt>けんのはな</rt></ruby>」であり、<ruby>白山国立公園<rt>はくさんこくりつこうえん</rt></ruby>などでみられる花は何でしょう？",
+                choices: [
+                    "クロユリ",
+                    "ヤマユリ",
+                    "スイセン",
+                    "サクラソウ"
+                ],
+                answerIndex: 0,
+                explanation: "<ruby>石川県<rt>いしかわけん</rt></ruby>の<ruby>県の花<rt>けんのはな</rt></ruby>は「クロユリ」です。<ruby>県章<rt>けんしょう</rt></ruby>は「<ruby>石<rt>いし</rt></ruby>」と「<ruby>川<rt>かわ</rt></ruby>」の文字をもとに<ruby>能登半島<rt>のとはんとう</rt></ruby>の地形をイメージしてつくられました。"
+            },
+
+            // ==========================================
+            // 第10回：福井県（10問）p.39, p.40
+            // ==========================================
+            {
+                id: "fukui_1",
+                round: "ROUND_10",
+                roundLabel: "第10回",
+                pref: "福井県",
+                prefRuby: "<ruby>福井県<rt>ふくいけん</rt></ruby>",
+                category: "<ruby>県庁所在地<rt>けんちょうしょざいち</rt></ruby>・<ruby>歴史<rt>れきし</rt></ruby>",
+                question: "<ruby>福井県<rt>ふくいけん</rt></ruby>の<ruby>県庁所在地<rt>けんちょうしょざいち</rt></ruby>はどこでしょう？（このあたりは昔「<ruby>越前<rt>えちぜん</rt></ruby>」や「<ruby>若狭<rt>わかさ</rt></ruby>」とよばれていました）",
+                choices: [
+                    "<ruby>福井市<rt>ふくいし</rt></ruby>",
+                    "<ruby>鯖江市<rt>さばえし</rt></ruby>",
+                    "<ruby>敦賀市<rt>つるがし</rt></ruby>",
+                    "<ruby>勝山市<rt>かつやまし</rt></ruby>"
+                ],
+                answerIndex: 0,
+                explanation: "<ruby>県庁所在地<rt>けんちょうしょざいち</rt></ruby>は<ruby>福井市<rt>ふくいし</rt></ruby>です。<ruby>県章<rt>けんしょう</rt></ruby>はカタカナの「フ・ク・イ」の3文字を組み合わせて表しています。"
+            },
+            {
+                id: "fukui_2",
+                round: "ROUND_10",
+                roundLabel: "第10回",
+                pref: "福井県",
+                prefRuby: "<ruby>福井県<rt>ふくいけん</rt></ruby>",
+                category: "<ruby>産業<rt>さんぎょう</rt></ruby>・<ruby>人物<rt>じんぶつ</rt></ruby>",
+                question: "<ruby>鯖江市<rt>さばえし</rt></ruby>で、約100年前に農家の冬の<ruby>副業<rt>ふくぎょう</rt></ruby>として「めがねフレーム」づくりを広めた人物はだれでしょう？",
+                choices: [
+                    "<ruby>増永五左衛門<rt>ますながござえもん</rt></ruby>",
+                    "<ruby>田中正造<rt>たなかしょうぞう</rt></ruby>",
+                    "<ruby>徳川斉昭<rt>とくがわなりあき</rt></ruby>",
+                    "<ruby>道元<rt>どうげん</rt></ruby>"
+                ],
+                answerIndex: 0,
+                explanation: "<ruby>鯖江市<rt>さばえし</rt></ruby>の<ruby>議員<rt>ぎいん</rt></ruby>をつとめていた<ruby>増永五左衛門<rt>ますながござえもん</rt></ruby>がめがねづくりを広め、現在も全国トップの生産をほこります。"
+            },
+            {
+                id: "fukui_3",
+                round: "ROUND_10",
+                roundLabel: "第10回",
+                pref: "福井県",
+                prefRuby: "<ruby>福井県<rt>ふくいけん</rt></ruby>",
+                category: "<ruby>産業<rt>さんぎょう</rt></ruby>",
+                question: "<ruby>鯖江市<rt>さばえし</rt></ruby>のめがねフレームや、<ruby>伝統的工芸品<rt>でんとうてきこうげいひん</rt></ruby>の「<ruby>越前和紙<rt>えちぜんわし</rt></ruby>」のように、その地域に根ざして発達した産業を何というでしょう？",
+                choices: [
+                    "<ruby>地場産業<rt>じばさんぎょう</rt></ruby>",
+                    "<ruby>重化学工業<rt>じゅうかがくこうぎょう</rt></ruby>",
+                    "<ruby>近郊農業<rt>きんこうのうぎょう</rt></ruby>",
+                    "<ruby>酪農<rt>らくのう</rt></ruby>"
+                ],
+                answerIndex: 0,
+                explanation: "地元の<ruby>資源<rt>しげん</rt></ruby>や労働力を生かしてその地域に根ざした産業を「<ruby>地場産業<rt>じばさんぎょう</rt></ruby>」とよびます。"
+            },
+            {
+                id: "fukui_4",
+                round: "ROUND_10",
+                roundLabel: "第10回",
+                pref: "福井県",
+                prefRuby: "<ruby>福井県<rt>ふくいけん</rt></ruby>",
+                category: "<ruby>地形<rt>ちけい</rt></ruby>・<ruby>自然<rt>しぜん</rt></ruby>",
+                question: "日本海の<ruby>荒波<rt>あらなみ</rt></ruby>にけずられてできた、<ruby>柱状<rt>ちゅうじょう</rt></ruby>の岩（五角形や六角形）が突き出た<ruby>断崖絶壁<rt>だんがいぜっぺき</rt></ruby>がおよそ1kmほど続く<ruby>福井県<rt>ふくいけん</rt></ruby>の景勝地はどこでしょう？",
+                choices: [
+                    "<ruby>東尋坊<rt>とうじんぼう</rt></ruby>",
+                    "<ruby>九十九里浜<rt>くじゅうくりはま</rt></ruby>",
+                    "<ruby>三保の松原<rt>みほのまつばら</rt></ruby>",
+                    "<ruby>犬吠埼<rt>いぬぼうさき</rt></ruby>"
+                ],
+                answerIndex: 0,
+                explanation: "<ruby>東尋坊<rt>とうじんぼう</rt></ruby>は<ruby>柱状<rt>ちゅうじょう</rt></ruby>の岩が続く<ruby>絶景<rt>ぜっけい</rt></ruby>スポットです。"
+            },
+            {
+                id: "fukui_5",
+                round: "ROUND_10",
+                roundLabel: "第10回",
+                pref: "福井県",
+                prefRuby: "<ruby>福井県<rt>ふくいけん</rt></ruby>",
+                category: "<ruby>歴史<rt>れきし</rt></ruby>・<ruby>文化<rt>ぶんか</rt></ruby>",
+                question: "<ruby>鎌倉時代<rt>かまくらじだい</rt></ruby>に「<ruby>道元<rt>どうげん</rt></ruby>」とよばれる<ruby>僧<rt>そう</rt></ruby>が開いたお寺で、現在も多くの<ruby>僧<rt>そう</rt></ruby>が<ruby>修行<rt>しゅぎょう</rt></ruby>をつんでいるのはどこでしょう？",
+                choices: [
+                    "<ruby>永平寺<rt>えいへいじ</rt></ruby>",
+                    "<ruby>浅草寺<rt>せんそうじ</rt></ruby>",
+                    "<ruby>鶴岡八幡宮<rt>つるがおかはちまんぐう</rt></ruby>",
+                    "<ruby>日光東照宮<rt>にっこうとうしょうぐう</rt></ruby>"
+                ],
+                answerIndex: 0,
+                explanation: "<ruby>永平寺<rt>えいへいじ</rt></ruby>は<ruby>道元<rt>どうげん</rt></ruby>が開いたお寺です。また、かつて<ruby>若狭湾<rt>わかさわん</rt></ruby>から<ruby>京都<rt>きょうと</rt></ruby>までさばを運んだ道は「さば<ruby>街道<rt>かいどう</rt></ruby>」とよばれます。"
+            },
+            {
+                id: "fukui_6",
+                round: "ROUND_10",
+                roundLabel: "第10回",
+                pref: "福井県",
+                prefRuby: "<ruby>福井県<rt>ふくいけん</rt></ruby>",
+                category: "<ruby>科学<rt>かがく</rt></ruby>・<ruby>観光<rt>かんこう</rt></ruby>",
+                question: "日本有数の「<ruby>恐竜化石<rt>きょうりゅうかせき</rt></ruby>の<ruby>出土地<rt>しゅつどち</rt></ruby>」であり、<ruby>恐竜博物館<rt>きょうりゅうはくぶつかん</rt></ruby>がある<ruby>福井県<rt>ふくいけん</rt></ruby>の市はどこでしょう？",
+                choices: [
+                    "<ruby>勝山市<rt>かつやまし</rt></ruby>",
+                    "<ruby>小浜市<rt>おばまし</rt></ruby>",
+                    "<ruby>鯖江市<rt>さばえし</rt></ruby>",
+                    "<ruby>敦賀市<rt>つるがし</rt></ruby>"
+                ],
+                answerIndex: 0,
+                explanation: "<ruby>勝山市<rt>かつやまし</rt></ruby>には<ruby>恐竜博物館<rt>きょうりゅうはくぶつかん</rt></ruby>があり、<ruby>福井市<rt>ふくいし</rt></ruby>と<ruby>勝山市<rt>かつやまし</rt></ruby>を結ぶ「えちぜん<ruby>鉄道<rt>てつどう</rt></ruby>」の<ruby>福井駅<rt>ふくいえき</rt></ruby>ホームのベンチには<ruby>恐竜<rt>きょうりゅう</rt></ruby>がすわっています。"
+            },
+            {
+                id: "fukui_7",
+                round: "ROUND_10",
+                roundLabel: "第10回",
+                pref: "福井県",
+                prefRuby: "<ruby>福井県<rt>ふくいけん</rt></ruby>",
+                category: "<ruby>産業<rt>さんぎょう</rt></ruby>・エネルギー",
+                question: "リアス<ruby>海岸<rt>かいがん</rt></ruby>が続く<ruby>若狭湾<rt>わかさわん</rt></ruby>ぞいの<ruby>敦賀市<rt>つるがし</rt></ruby>や<ruby>美浜町<rt>みはまちょう</rt></ruby>などに多くの<ruby>原子力発電所<rt>げんしりょくはつでんしょ</rt></ruby>が集まっていることから、この地域は何とよばれることがあるでしょう？",
+                choices: [
+                    "<ruby>原発銀座<rt>げんぱつぎんざ</rt></ruby>",
+                    "<ruby>京浜工業地帯<rt>けいひんこうぎょうちたい</rt></ruby>",
+                    "ベッドタウン",
+                    "<ruby>関東<rt>かんとう</rt></ruby>の<ruby>食糧庫<rt>しょくりょうこ</rt></ruby>"
+                ],
+                answerIndex: 0,
+                explanation: "1970年に<ruby>運転<rt>うんてん</rt></ruby>を始めたのを皮切りに多くの<ruby>原子力発電所<rt>げんしりょくはつでんしょ</rt></ruby>が建てられたため「<ruby>原発銀座<rt>げんぱつぎんざ</rt></ruby>」とよばれます。"
+            },
+            {
+                id: "fukui_8",
+                round: "ROUND_10",
+                roundLabel: "第10回",
+                pref: "福井県",
+                prefRuby: "<ruby>福井県<rt>ふくいけん</rt></ruby>",
+                category: "<ruby>交通<rt>こうつう</rt></ruby>",
+                question: "2015年に<ruby>東京<rt>とうきょう</rt></ruby>から<ruby>金沢<rt>かなざわ</rt></ruby>まで開業し、2024年には<ruby>金沢<rt>かなざわ</rt></ruby>と<ruby>福井県<rt>ふくいけん</rt></ruby>の<ruby>敦賀<rt>つるが</rt></ruby>区間が開業した<ruby>新幹線<rt>しんかんせん</rt></ruby>は何でしょう？",
+                choices: [
+                    "<ruby>北陸新幹線<rt>ほくりくしんかんせん</rt></ruby>",
+                    "<ruby>東海道新幹線<rt>とうかいどうしんかんせん</rt></ruby>",
+                    "<ruby>東北新幹線<rt>とうほくしんかんせん</rt></ruby>",
+                    "<ruby>上越新幹線<rt>じょうえつしんかんせん</rt></ruby>"
+                ],
+                answerIndex: 0,
+                explanation: "<ruby>北陸新幹線<rt>ほくりくしんかんせん</rt></ruby>が開業したことで、<ruby>首都圏<rt>しゅとけん</rt></ruby>から<ruby>石川県<rt>いしかわけん</rt></ruby>や<ruby>福井県<rt>ふくいけん</rt></ruby>へのアクセスがとても便利になりました。"
+            },
+            {
+                id: "fukui_9",
+                round: "ROUND_10",
+                roundLabel: "第10回",
+                pref: "福井県",
+                prefRuby: "<ruby>福井県<rt>ふくいけん</rt></ruby>",
+                category: "<ruby>漁業<rt>ぎょぎょう</rt></ruby>・<ruby>名産<rt>めいさん</rt></ruby>",
+                question: "<ruby>福井県<rt>ふくいけん</rt></ruby>の<ruby>日本海<rt>にほんかい</rt></ruby>側で冬に多く<ruby>水揚<rt>みずあ</rt></ruby>げされる有名なカニは何でしょう？",
+                choices: [
+                    "ずわいがに",
+                    "たらばがに",
+                    "けがに",
+                    "はなさきがに"
+                ],
+                answerIndex: 0,
+                explanation: "<ruby>福井県<rt>ふくいけん</rt></ruby>では冬に「ずわいがに（<ruby>越前<rt>えちぜん</rt></ruby>がに）」が多く<ruby>水揚<rt>みずあ</rt></ruby>げされます。"
+            },
+            {
+                id: "fukui_10",
+                round: "ROUND_10",
+                roundLabel: "第10回",
+                pref: "福井県",
+                prefRuby: "<ruby>福井県<rt>ふくいけん</rt></ruby>",
+                category: "<ruby>都道府県図<rt>とどうふけんず</rt></ruby>かん",
+                question: "<ruby>福井県<rt>ふくいけん</rt></ruby>の「<ruby>県の花<rt>けんのはな</rt></ruby>」であり、漢字で「<ruby>水仙<rt>すいせん</rt></ruby>」と書く花は何でしょう？",
+                choices: [
+                    "スイセン",
+                    "クロユリ",
+                    "ナノハナ",
+                    "フジザクラ"
+                ],
+                answerIndex: 0,
+                explanation: "<ruby>福井県<rt>ふくいけん</rt></ruby>の<ruby>県の花<rt>けんのはな</rt></ruby>は「スイセン（<ruby>水仙<rt>すいせん</rt></ruby>）」です。"
+            }
+        ];
+
+        // ==========================================
+        // アプリの状態管理（localStorage連携）
+        // ==========================================
+        const STORAGE_KEY_WRONG = 'pref_quiz_6_10_wrong';
+        const STORAGE_KEY_STATS = 'pref_quiz_6_10_stats';
+
+        let state = {
+            selectedFilter: "ALL",
+            isReviewMode: false,
+            currentQuestion: null,
+            currentChoices: [],
+            lastQuestionId: null,
+            answeredCount: 0,
+            correctCount: 0,
+            combo: 0,
+            wrongQuestionIds: new Set(),
+            isAnswered: false
+        };
+
+        // localStorageから読み込み
+        function loadSavedState() {
+            try {
+                const rawWrong = localStorage.getItem(STORAGE_KEY_WRONG);
+                if (rawWrong) {
+                    const parsedWrong = JSON.parse(rawWrong);
+                    if (Array.isArray(parsedWrong)) {
+                        const validIds = new Set(quizDatabase.map(q => q.id));
+                        state.wrongQuestionIds = new Set(parsedWrong.filter(id => validIds.has(id)));
+                    }
+                }
+                const rawStats = localStorage.getItem(STORAGE_KEY_STATS);
+                if (rawStats) {
+                    const parsedStats = JSON.parse(rawStats);
+                    if (typeof parsedStats.answeredCount === 'number') state.answeredCount = parsedStats.answeredCount;
+                    if (typeof parsedStats.correctCount === 'number') state.correctCount = parsedStats.correctCount;
+                    if (typeof parsedStats.combo === 'number') state.combo = parsedStats.combo;
+                }
+            } catch (e) {
+                console.warn('保存データの読み込みに失敗しました', e);
+            }
+        }
+
+        // localStorageへ保存
+        function saveState() {
+            try {
+                localStorage.setItem(STORAGE_KEY_WRONG, JSON.stringify(Array.from(state.wrongQuestionIds)));
+                localStorage.setItem(STORAGE_KEY_STATS, JSON.stringify({
+                    answeredCount: state.answeredCount,
+                    correctCount: state.correctCount,
+                    combo: state.combo
+                }));
+            } catch (e) {
+                console.warn('データの保存に失敗しました', e);
+            }
+        }
+
+        // DOM要素の参照
+        const els = {
+            filterSelect: document.getElementById('filter-select'),
+            reviewModeBtn: document.getElementById('review-mode-btn'),
+            reviewBtnText: document.getElementById('review-btn-text'),
+            modeBanner: document.getElementById('mode-banner'),
+            reviewRemaining: document.getElementById('review-remaining'),
+            qRoundBadge: document.getElementById('q-round-badge'),
+            qPrefBadge: document.getElementById('q-pref-badge'),
+            qCategoryBadge: document.getElementById('q-category-badge'),
+            qStreakBadge: document.getElementById('q-streak-badge'),
+            questionText: document.getElementById('question-text'),
+            choicesContainer: document.getElementById('choices-container'),
+            feedbackArea: document.getElementById('feedback-area'),
+            resultIcon: document.getElementById('result-icon'),
+            resultTitle: document.getElementById('result-title'),
+            correctAnswerSub: document.getElementById('correct-answer-sub'),
+            explanationText: document.getElementById('explanation-text'),
+            comboCount: document.getElementById('combo-count'),
+            accuracyRate: document.getElementById('accuracy-rate'),
+            totalAnswered: document.getElementById('total-answered'),
+            resetModal: document.getElementById('reset-modal')
+        };
+
+        // 配列をシャッフルする関数（Fisher-Yates）
+        function shuffleArray(array) {
+            const arr = [...array];
+            for (let i = arr.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [arr[i], arr[j]] = [arr[j], arr[i]];
+            }
+            return arr;
+        }
+
+        // 初期化処理
+        function init() {
+            loadSavedState();
+
+            const allOption = els.filterSelect.querySelector('option[value="ALL"]');
+            if (allOption) {
+                allOption.textContent = `🌟 すべてランダム（全${quizDatabase.length}問）`;
+            }
+
+            els.filterSelect.addEventListener('change', (e) => {
+                state.selectedFilter = e.target.value;
+                if (state.isReviewMode) {
+                    exitReviewMode(false);
+                }
+                nextQuestion();
+            });
+
+            // キーボードショートカット対応
+            document.addEventListener('keydown', (e) => {
+                if (!els.resetModal.classList.contains('hidden')) return;
+
+                if (!state.isAnswered) {
+                    if (['1', '2', '3', '4'].includes(e.key)) {
+                        const idx = parseInt(e.key, 10) - 1;
+                        const buttons = els.choicesContainer.querySelectorAll('button');
+                        if (buttons[idx]) {
+                            buttons[idx].click();
+                        }
+                    }
+                } else {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault();
+                        nextQuestion();
+                    }
+                }
+            });
+
+            updateStatsUI();
+            updateReviewUI();
+            nextQuestion();
+        }
+
+        // 現在のフィルターに応じた出題プールを取得
+        function getQuestionPool() {
+            if (state.isReviewMode) {
+                return quizDatabase.filter(q => state.wrongQuestionIds.has(q.id));
+            }
+            if (state.selectedFilter === "ALL") {
+                return quizDatabase;
+            }
+            if (state.selectedFilter.startsWith("ROUND_")) {
+                return quizDatabase.filter(q => q.round === state.selectedFilter);
+            }
+            return quizDatabase.filter(q => q.pref === state.selectedFilter);
+        }
+
+        // 次の問題を出題
+        function nextQuestion() {
+            state.isAnswered = false;
+            els.feedbackArea.classList.add('hidden');
+            els.correctAnswerSub.classList.add('hidden');
+
+            let pool = getQuestionPool();
+
+            // 復習モードで全問クリアした場合
+            if (state.isReviewMode && pool.length === 0) {
+                exitReviewMode(true);
+                return;
+            }
+
+            // 直前と同じ問題が連続しないようにフィルタ
+            if (pool.length > 1 && state.lastQuestionId) {
+                pool = pool.filter(q => q.id !== state.lastQuestionId);
+            }
+
+            // ランダムに1問選択
+            const randomIndex = Math.floor(Math.random() * pool.length);
+            const question = pool[randomIndex];
+            state.currentQuestion = question;
+            state.lastQuestionId = question.id;
+
+            // メタバッジ・問題文を反映
+            els.qRoundBadge.textContent = question.roundLabel;
+            els.qPrefBadge.innerHTML = question.prefRuby || question.pref;
+            els.qCategoryBadge.innerHTML = question.category;
+            els.questionText.innerHTML = question.question;
+
+            if (state.combo >= 3) {
+                els.qStreakBadge.innerHTML = `🔥 ${state.combo}<ruby>連続<rt>れんぞく</rt></ruby>せいかい！`;
+                els.qStreakBadge.classList.remove('hidden');
+            } else {
+                els.qStreakBadge.classList.add('hidden');
+            }
+
+            // 選択肢をシャッフルして描画（縦幅を抑えたスリムデザイン）
+            const choiceObjs = question.choices.map((htmlStr, idx) => ({
+                html: htmlStr,
+                isCorrect: idx === question.answerIndex
+            }));
+            state.currentChoices = shuffleArray(choiceObjs);
+
+            els.choicesContainer.innerHTML = '';
+            const labels = ['ア', 'イ', 'ウ', 'エ'];
+
+            state.currentChoices.forEach((choiceObj, idx) => {
+                const btn = document.createElement('button');
+                btn.className = "choice-btn w-full text-left bg-slate-50 hover:bg-blue-50 border-2 border-slate-200 hover:border-blue-400 rounded-xl px-2.5 py-2 sm:p-3.5 font-bold text-slate-800 text-sm sm:text-base flex items-center gap-2 sm:gap-3 shadow-2xs cursor-pointer";
+                btn.innerHTML = `
+                    <span class="w-6 h-6 sm:w-7 sm:h-7 rounded-full bg-white border border-slate-300 text-blue-600 font-extrabold text-xs sm:text-sm flex items-center justify-center shrink-0">
+                        ${labels[idx]}
+                    </span>
+                    <span class="ruby-choice">${choiceObj.html}</span>
+                `;
+                btn.onclick = () => handleAnswer(idx, btn);
+                els.choicesContainer.appendChild(btn);
+            });
+
+            updateReviewUI();
+
+            // 次の問題に切り替わったら上部へスムーズスクロール
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        // 回答選択時の処理
+        function handleAnswer(selectedIdx, clickedBtn) {
+            if (state.isAnswered) return;
+            state.isAnswered = true;
+
+            const q = state.currentQuestion;
+            const selectedChoiceObj = state.currentChoices[selectedIdx];
+            const isCorrect = selectedChoiceObj.isCorrect;
+            state.answeredCount++;
+
+            const buttons = els.choicesContainer.querySelectorAll('button');
+            buttons.forEach((btn, idx) => {
+                btn.disabled = true;
+                btn.classList.remove('hover:bg-blue-50', 'hover:border-blue-400', 'cursor-pointer');
+                const isThisCorrect = state.currentChoices[idx].isCorrect;
+
+                if (isThisCorrect) {
+                    btn.classList.remove('bg-slate-50', 'border-slate-200');
+                    btn.classList.add('bg-emerald-50', 'border-emerald-500', 'text-emerald-900', 'ring-2', 'ring-emerald-200');
+                    btn.querySelector('span:first-child').classList.add('bg-emerald-500', 'text-white', 'border-emerald-500');
+                } else if (btn === clickedBtn && !isCorrect) {
+                    btn.classList.remove('bg-slate-50', 'border-slate-200');
+                    btn.classList.add('bg-rose-50', 'border-rose-400', 'text-rose-900');
+                    btn.querySelector('span:first-child').classList.add('bg-rose-500', 'text-white', 'border-rose-500');
+                } else {
+                    btn.classList.add('opacity-50');
+                }
+            });
+
+            if (isCorrect) {
+                state.correctCount++;
+                state.combo++;
+                if (state.wrongQuestionIds.has(q.id)) {
+                    state.wrongQuestionIds.delete(q.id);
+                }
+
+                els.resultIcon.textContent = "⭕";
+                els.resultTitle.innerHTML = getPraiseMessage(state.combo);
+                els.resultTitle.className = "text-base sm:text-xl font-extrabold text-emerald-600 ruby-ui";
+
+                if (state.combo > 0 && state.combo % 5 === 0) {
+                    fireConfetti();
+                }
+            } else {
+                state.combo = 0;
+                state.wrongQuestionIds.add(q.id);
+
+                const correctHtml = q.choices[q.answerIndex];
+                els.resultIcon.textContent = "❌";
+                els.resultTitle.textContent = "ざんねん… もうひと息！";
+                els.resultTitle.className = "text-base sm:text-xl font-extrabold text-rose-600";
+                els.correctAnswerSub.innerHTML = `<ruby>正解<rt>せいかい</rt></ruby>は「<span class="text-emerald-700 underline decoration-emerald-400 decoration-2">${correctHtml}</span>」だよ`;
+                els.correctAnswerSub.classList.remove('hidden');
+            }
+
+            els.explanationText.innerHTML = q.explanation;
+            els.feedbackArea.classList.remove('hidden');
+
+            saveState();
+            updateStatsUI();
+            updateReviewUI();
+
+            setTimeout(() => {
+                els.feedbackArea.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+            }, 80);
+        }
+
+        // 連続正解数に応じたほめ言葉
+        function getPraiseMessage(combo) {
+            if (combo >= 10) return `神レベル！${combo}<ruby>連続<rt>れんぞく</rt></ruby>せいかい！！`;
+            if (combo >= 5) return `すごい！${combo}<ruby>連続<rt>れんぞく</rt></ruby>せいかい<ruby>達成<rt>たっせい</rt></ruby>！`;
+            if (combo >= 3) return `<ruby>絶好調<rt>ぜっこうちょう</rt></ruby>！${combo}<ruby>連続<rt>れんぞく</rt></ruby>せいかい！`;
+            return "せいかい！その<ruby>調子<rt>ちょうし</rt></ruby>！";
+        }
+
+        // 紙吹雪エフェクト
+        function fireConfetti() {
+            if (typeof confetti === 'function') {
+                confetti({
+                    particleCount: 65,
+                    spread: 55,
+                    origin: { y: 0.7 }
+                });
+            }
+        }
+
+        // ステータスバーの更新
+        function updateStatsUI() {
+            els.comboCount.textContent = state.combo;
+            els.totalAnswered.textContent = state.answeredCount;
+
+            if (state.answeredCount === 0) {
+                els.accuracyRate.textContent = "--%";
+            } else {
+                const rate = Math.round((state.correctCount / state.answeredCount) * 100);
+                els.accuracyRate.textContent = `${rate}%`;
+            }
+        }
+
+        // 復習ボタン・バナーの表示更新
+        function updateReviewUI() {
+            const count = state.wrongQuestionIds.size;
+            els.reviewBtnText.innerHTML = `<ruby>復習<rt>ふくしゅう</rt></ruby>(${count}問)`;
+            els.reviewModeBtn.disabled = (count === 0 && !state.isReviewMode);
+
+            if (state.isReviewMode) {
+                els.modeBanner.classList.remove('hidden');
+                els.reviewRemaining.textContent = `のこり ${count} 問`;
+                els.reviewModeBtn.classList.add('bg-rose-500', 'text-white', 'border-rose-500');
+                els.reviewModeBtn.classList.remove('bg-white', 'text-rose-600');
+            } else {
+                els.modeBanner.classList.add('hidden');
+                els.reviewModeBtn.classList.remove('bg-rose-500', 'text-white', 'border-rose-500');
+                els.reviewModeBtn.classList.add('bg-white', 'text-rose-600');
+            }
+        }
+
+        // 復習モードの切り替え
+        function toggleReviewMode() {
+            if (state.isReviewMode) {
+                exitReviewMode(true);
+            } else {
+                if (state.wrongQuestionIds.size === 0) return;
+                state.isReviewMode = true;
+                updateReviewUI();
+                nextQuestion();
+            }
+        }
+
+        // 復習モード終了
+        function exitReviewMode(shouldLoadNext = true) {
+            state.isReviewMode = false;
+            updateReviewUI();
+            if (shouldLoadNext) {
+                nextQuestion();
+            }
+        }
+
+        // リセットモーダル制御
+        function resetStats() {
+            els.resetModal.classList.remove('hidden');
+        }
+        function closeResetModal() {
+            els.resetModal.classList.add('hidden');
+        }
+        function confirmReset() {
+            state.answeredCount = 0;
+            state.correctCount = 0;
+            state.combo = 0;
+            state.wrongQuestionIds.clear();
+            state.isReviewMode = false;
+            saveState();
+            closeResetModal();
+            updateStatsUI();
+            updateReviewUI();
+            nextQuestion();
+        }
+
+        // 起動
+        window.addEventListener('DOMContentLoaded', init);
+    </script>
+</body>
+</html>

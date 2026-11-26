@@ -1,0 +1,505 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>小3 理科・社会 クイズ ポータル</title>
+    <style>
+        /* ベースリセットとフォント設定（外部リソース不使用・システムフォント最適化） */
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+        html, body {
+            height: 100%;
+        }
+        body {
+            font-family: "Hiragino Maru Gothic ProN", "Rounded Mplus 1c", "BIZ UDPGothic", "Meiryo", sans-serif;
+            background-color: #f8fafc;
+            background-image: radial-gradient(#e2e8f0 1.25px, transparent 1.25px);
+            background-size: 18px 18px;
+            color: #1e293b;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            min-height: 100dvh;
+            padding-bottom: 10px;
+            user-select: none;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        /* ルビ（フリガナ）が重ならず、かつコンパクトに収まる行間設定 */
+        ruby {
+            ruby-align: center;
+        }
+        rt {
+            font-size: 0.56em;
+            font-weight: 700;
+            line-height: 1.0;
+            color: inherit;
+        }
+        .ruby-header {
+            line-height: 1.65;
+        }
+        .ruby-title {
+            line-height: 1.72;
+        }
+        .ruby-sub {
+            line-height: 1.65;
+        }
+        .ruby-badge {
+            line-height: 1.45;
+        }
+
+        /* コンパクトヘッダー（LINE内ブラウザでも圧迫しない高さ） */
+        header {
+            background-color: rgba(255, 255, 255, 0.96);
+            border-bottom: 1px solid #e2e8f0;
+            position: sticky;
+            top: 0;
+            z-index: 20;
+            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+        }
+        .header-inner {
+            max-width: 560px;
+            margin: 0 auto;
+            padding: 8px 12px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 8px;
+        }
+        .header-title-wrap {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            min-width: 0;
+        }
+        .header-icon {
+            font-size: 20px;
+            flex-shrink: 0;
+        }
+        .header-title {
+            font-size: 15px;
+            font-weight: 800;
+            color: #0f172a;
+            letter-spacing: -0.01em;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .total-badge {
+            background-color: #f1f5f9;
+            border: 1px solid #cbd5e1;
+            color: #334155;
+            font-size: 11px;
+            font-weight: 800;
+            padding: 3px 10px;
+            border-radius: 9999px;
+            flex-shrink: 0;
+        }
+
+        /* メインコンテンツ（スマホ1画面に4カードが収まる設計） */
+        main {
+            max-width: 560px;
+            width: 100%;
+            margin: 6px auto 0;
+            padding: 0 10px;
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        /* クイズカード共通スタイル */
+        .quiz-card {
+            display: block;
+            text-decoration: none;
+            color: inherit;
+            border-radius: 16px;
+            padding: 9px 11px;
+            box-shadow: 0 2px 6px rgba(15, 23, 42, 0.05);
+            transition: transform 0.12s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.12s ease;
+        }
+        .quiz-card:active {
+            transform: scale(0.985);
+        }
+
+        /* 社会テーマ（青系統一：#2563eb / #eff6ff / #bfdbfe） */
+        .card-social {
+            background: linear-gradient(135deg, #ffffff 0%, #eff6ff 100%);
+            border: 2px solid #bfdbfe;
+        }
+        .card-social:hover {
+            border-color: #2563eb;
+            box-shadow: 0 4px 10px rgba(37, 99, 235, 0.12);
+        }
+        .card-social .icon-box {
+            background-color: #eff6ff;
+            border: 1.5px solid #bfdbfe;
+        }
+        .card-social .tag-pill {
+            background-color: #2563eb;
+            color: #ffffff;
+        }
+        .card-social .status-pill {
+            background-color: #eff6ff;
+            border: 1px solid #bfdbfe;
+            color: #2563eb;
+        }
+        .card-social .arrow-btn {
+            background-color: #eff6ff;
+            border: 1px solid #bfdbfe;
+            color: #2563eb;
+        }
+
+        /* 理科テーマ（緑系統一：#16a34a / #f0fdf4 / #bbf7d0） */
+        .card-science {
+            background: linear-gradient(135deg, #ffffff 0%, #f0fdf4 100%);
+            border: 2px solid #bbf7d0;
+        }
+        .card-science:hover {
+            border-color: #16a34a;
+            box-shadow: 0 4px 10px rgba(22, 163, 74, 0.12);
+        }
+        .card-science .icon-box {
+            background-color: #f0fdf4;
+            border: 1.5px solid #bbf7d0;
+        }
+        .card-science .tag-pill {
+            background-color: #16a34a;
+            color: #ffffff;
+        }
+        .card-science .status-pill {
+            background-color: #f0fdf4;
+            border: 1px solid #bbf7d0;
+            color: #16a34a;
+        }
+        .card-science .arrow-btn {
+            background-color: #f0fdf4;
+            border: 1px solid #bbf7d0;
+            color: #16a34a;
+        }
+
+        /* カード内部レイアウト */
+        .card-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 9px;
+        }
+        .card-left {
+            display: flex;
+            align-items: center;
+            gap: 9px;
+            min-width: 0;
+            flex: 1;
+        }
+        .icon-box {
+            width: 42px;
+            height: 42px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 21px;
+            flex-shrink: 0;
+        }
+        .card-body {
+            min-width: 0;
+            flex: 1;
+        }
+        .card-top-meta {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 6px;
+            margin-bottom: 2px;
+        }
+        .tag-pill {
+            display: inline-block;
+            font-size: 10px;
+            font-weight: 800;
+            padding: 2px 7px;
+            border-radius: 6px;
+        }
+        .status-pill {
+            display: inline-flex;
+            align-items: center;
+            font-size: 10px;
+            font-weight: 800;
+            padding: 2px 8px;
+            border-radius: 9999px;
+            flex-shrink: 0;
+        }
+        /* 復習問題があるときの強調バッジ */
+        .status-pill-review {
+            background-color: #ffe4e6 !important;
+            border: 1px solid #fda4af !important;
+            color: #be123c !important;
+        }
+        .card-title {
+            font-size: 14px;
+            font-weight: 800;
+            color: #0f172a;
+        }
+        .card-desc {
+            font-size: 10.5px;
+            font-weight: 600;
+            color: #475569;
+        }
+        .arrow-btn {
+            width: 26px;
+            height: 26px;
+            border-radius: 9999px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 10px;
+            font-weight: 800;
+            flex-shrink: 0;
+        }
+
+        /* コンパクトフッター */
+        footer {
+            max-width: 560px;
+            width: 100%;
+            margin: 6px auto 0;
+            padding: 0 10px;
+        }
+        .footer-box {
+            background-color: rgba(255, 255, 255, 0.92);
+            border: 1px dashed #cbd5e1;
+            border-radius: 12px;
+            padding: 5px 10px;
+            font-size: 10.5px;
+            color: #475569;
+            text-align: center;
+        }
+
+        /* タブレット・PCなどの広い画面向け調整 */
+        @media (min-width: 640px) {
+            .header-inner {
+                padding: 10px 16px;
+            }
+            .header-title {
+                font-size: 18px;
+            }
+            .total-badge {
+                font-size: 12px;
+            }
+            main {
+                gap: 12px;
+                padding: 0 16px;
+            }
+            .quiz-card {
+                padding: 14px 16px;
+            }
+            .icon-box {
+                width: 48px;
+                height: 48px;
+                font-size: 24px;
+            }
+            .tag-pill, .status-pill {
+                font-size: 11px;
+            }
+            .card-title {
+                font-size: 16px;
+            }
+            .card-desc {
+                font-size: 12px;
+            }
+            .arrow-btn {
+                width: 30px;
+                height: 30px;
+                font-size: 12px;
+            }
+            .footer-box {
+                font-size: 12px;
+                padding: 7px 12px;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- コンパクトヘッダー（小3表記） -->
+    <header>
+        <div class="header-inner">
+            <div class="header-title-wrap">
+                <span class="header-icon">🎓</span>
+                <h1 class="header-title ruby-header">
+                    <ruby>小<rt>しょう</rt></ruby>3 <ruby>理科<rt>りか</rt></ruby>・<ruby>社会<rt>しゃかい</rt></ruby> クイズ
+                </h1>
+            </div>
+            <span class="total-badge ruby-badge">
+                <ruby>全<rt>ぜん</rt></ruby>400<ruby>問<rt>もん</rt></ruby>
+            </span>
+        </div>
+    </header>
+
+    <!-- メインコンテンツ（スマホ1画面に4カードが収まるコンパクト設計） -->
+    <main>
+
+        <!-- 1. 社会 第1回〜第5回（青テーマ統一） -->
+        <a href="./s3shakai_1-5.html" class="quiz-card card-social">
+            <div class="card-row">
+                <div class="card-left">
+                    <div class="icon-box">⛩️</div>
+                    <div class="card-body">
+                        <div class="card-top-meta">
+                            <span class="tag-pill ruby-badge">
+                                <ruby>小<rt>しょう</rt></ruby>3 <ruby>社会<rt>しゃかい</rt></ruby>
+                            </span>
+                            <span id="badge-pref-1-5" class="status-pill ruby-badge">
+                                <ruby>全<rt>ぜん</rt></ruby>100<ruby>問<rt>もん</rt></ruby>
+                            </span>
+                        </div>
+                        <h2 class="card-title ruby-title">
+                            <ruby>社会<rt>しゃかい</rt></ruby> <ruby>第<rt>だい</rt></ruby>1<ruby>回<rt>かい</rt></ruby>〜<ruby>第<rt>だい</rt></ruby>5<ruby>回<rt>かい</rt></ruby>
+                        </h2>
+                        <p class="card-desc ruby-sub">
+                            <ruby>京都<rt>きょうと</rt></ruby>・<ruby>奈良<rt>なら</rt></ruby>・<ruby>大阪<rt>おおさか</rt></ruby>・<ruby>和歌山<rt>わかやま</rt></ruby>・<ruby>兵庫<rt>ひょうご</rt></ruby>・<ruby>滋賀<rt>しが</rt></ruby>・<ruby>愛知<rt>あいち</rt></ruby>・<ruby>三重<rt>みえ</rt></ruby>・<ruby>長野<rt>ながの</rt></ruby>・<ruby>岐阜<rt>ぎふ</rt></ruby>／<ruby>全<rt>ぜん</rt></ruby>100<ruby>問<rt>もん</rt></ruby>
+                        </p>
+                    </div>
+                </div>
+                <div class="arrow-btn">▶</div>
+            </div>
+        </a>
+
+        <!-- 2. 社会 第6回〜第10回（青テーマ統一） -->
+        <a href="./s3shakai_6-10.html" class="quiz-card card-social">
+            <div class="card-row">
+                <div class="card-left">
+                    <div class="icon-box">🗻</div>
+                    <div class="card-body">
+                        <div class="card-top-meta">
+                            <span class="tag-pill ruby-badge">
+                                <ruby>小<rt>しょう</rt></ruby>3 <ruby>社会<rt>しゃかい</rt></ruby>
+                            </span>
+                            <span id="badge-pref-6-10" class="status-pill ruby-badge">
+                                <ruby>全<rt>ぜん</rt></ruby>100<ruby>問<rt>もん</rt></ruby>
+                            </span>
+                        </div>
+                        <h2 class="card-title ruby-title">
+                            <ruby>社会<rt>しゃかい</rt></ruby> <ruby>第<rt>だい</rt></ruby>6<ruby>回<rt>かい</rt></ruby>〜<ruby>第<rt>だい</rt></ruby>10<ruby>回<rt>かい</rt></ruby>
+                        </h2>
+                        <p class="card-desc ruby-sub">
+                            <ruby>山梨<rt>やまなし</rt></ruby>・<ruby>静岡<rt>しずおか</rt></ruby>・<ruby>埼玉<rt>さいたま</rt></ruby>・<ruby>東京<rt>とうきょう</rt></ruby>・<ruby>神奈川<rt>かながわ</rt></ruby>・<ruby>茨城<rt>いばらき</rt></ruby>・<ruby>千葉<rt>ちば</rt></ruby>・<ruby>栃木<rt>とちぎ</rt></ruby>・<ruby>群馬<rt>ぐんま</rt></ruby>・<ruby>石川<rt>いしかわ</rt></ruby>・<ruby>福井<rt>ふくい</rt></ruby>／<ruby>全<rt>ぜん</rt></ruby>100<ruby>問<rt>もん</rt></ruby>
+                        </p>
+                    </div>
+                </div>
+                <div class="arrow-btn">▶</div>
+            </div>
+        </a>
+
+        <!-- 3. 理科 第1回〜第5回（緑テーマ統一） -->
+        <a href="./s3rika_1-5.html" class="quiz-card card-science">
+            <div class="card-row">
+                <div class="card-left">
+                    <div class="icon-box">💧</div>
+                    <div class="card-body">
+                        <div class="card-top-meta">
+                            <span class="tag-pill ruby-badge">
+                                <ruby>小<rt>しょう</rt></ruby>3 <ruby>理科<rt>りか</rt></ruby>
+                            </span>
+                            <span id="badge-sci-1-5" class="status-pill ruby-badge">
+                                <ruby>全<rt>ぜん</rt></ruby>100<ruby>問<rt>もん</rt></ruby>
+                            </span>
+                        </div>
+                        <h2 class="card-title ruby-title">
+                            <ruby>理科<rt>りか</rt></ruby> <ruby>第<rt>だい</rt></ruby>1<ruby>回<rt>かい</rt></ruby>〜<ruby>第<rt>だい</rt></ruby>5<ruby>回<rt>かい</rt></ruby>
+                        </h2>
+                        <p class="card-desc ruby-sub">
+                            <ruby>地面<rt>じめん</rt></ruby>・<ruby>空<rt>そら</rt></ruby>の<ruby>水<rt>みず</rt></ruby>、<ruby>食塩<rt>しょくえん</rt></ruby>と<ruby>砂糖<rt>さとう</rt></ruby>、ろうそく、<ruby>毛<rt>け</rt></ruby>のある<ruby>動物<rt>どうぶつ</rt></ruby>／<ruby>全<rt>ぜん</rt></ruby>100<ruby>問<rt>もん</rt></ruby>
+                        </p>
+                    </div>
+                </div>
+                <div class="arrow-btn">▶</div>
+            </div>
+        </a>
+
+        <!-- 4. 理科 第6回〜第10回（緑テーマ統一） -->
+        <a href="./s3rika_6-10.html" class="quiz-card card-science">
+            <div class="card-row">
+                <div class="card-left">
+                    <div class="icon-box">🔬</div>
+                    <div class="card-body">
+                        <div class="card-top-meta">
+                            <span class="tag-pill ruby-badge">
+                                <ruby>小<rt>しょう</rt></ruby>3 <ruby>理科<rt>りか</rt></ruby>
+                            </span>
+                            <span id="badge-sci-6-10" class="status-pill ruby-badge">
+                                <ruby>全<rt>ぜん</rt></ruby>100<ruby>問<rt>もん</rt></ruby>
+                            </span>
+                        </div>
+                        <h2 class="card-title ruby-title">
+                            <ruby>理科<rt>りか</rt></ruby> <ruby>第<rt>だい</rt></ruby>6<ruby>回<rt>かい</rt></ruby>〜<ruby>第<rt>だい</rt></ruby>10<ruby>回<rt>かい</rt></ruby>
+                        </h2>
+                        <p class="card-desc ruby-sub">
+                            <ruby>羽<rt>はね</rt></ruby>のある<ruby>動物<rt>どうぶつ</rt></ruby>、<ruby>変温動物<rt>へんおんどうぶつ</rt></ruby>、<ruby>人体<rt>じんたい</rt></ruby>、<ruby>鏡<rt>かがみ</rt></ruby>と<ruby>光<rt>ひかり</rt></ruby>、<ruby>音<rt>おと</rt></ruby>の<ruby>高<rt>たか</rt></ruby>さ／<ruby>全<rt>ぜん</rt></ruby>100<ruby>問<rt>もん</rt></ruby>
+                        </p>
+                    </div>
+                </div>
+                <div class="arrow-btn">▶</div>
+            </div>
+        </a>
+
+    </main>
+
+    <!-- コンパクトフッター（ブックマーク・ホーム画面追加案内） -->
+    <footer>
+        <div class="footer-box ruby-sub">
+            💡 <ruby>右上<rt>みぎうえ</rt></ruby>「︙」→「<strong>Chromeで<ruby>開<rt>ひら</rt></ruby>く</strong>」→「<strong>ホーム<ruby>画面<rt>がめん</rt></ruby>に<ruby>追加<rt>ついか</rt></ruby></strong>」ですぐ<ruby>開<rt>ひら</rt></ruby>けるよ！
+        </div>
+    </footer>
+
+    <script>
+        /**
+         * 各クイズアプリで保存された「まちがえた問題数」をlocalStorageから読み取りバッジを更新する
+         */
+        function updateReviewBadges() {
+            const targets = [
+                { badgeId: 'badge-pref-1-5', keys: ['prefecture_quiz_1_5_wrong', 'pref_quiz_1_5_wrong'] },
+                { badgeId: 'badge-pref-6-10', keys: ['prefecture_quiz_wrong', 'pref_quiz_6_10_wrong'] },
+                { badgeId: 'badge-sci-1-5', keys: ['science_quiz_1_5_wrong'] },
+                { badgeId: 'badge-sci-6-10', keys: ['science_quiz_6_10_wrong'] }
+            ];
+
+            targets.forEach(function (item) {
+                const badgeEl = document.getElementById(item.badgeId);
+                if (!badgeEl) return;
+
+                let wrongCount = 0;
+                item.keys.forEach(function (key) {
+                    try {
+                        const raw = localStorage.getItem(key);
+                        if (raw) {
+                            const parsed = JSON.parse(raw);
+                            if (Array.isArray(parsed) && parsed.length > wrongCount) {
+                                wrongCount = parsed.length;
+                            }
+                        }
+                    } catch (e) {
+                        // localStorageのパースエラー時は無視
+                    }
+                });
+
+                if (wrongCount > 0) {
+                    badgeEl.classList.add('status-pill-review');
+                    badgeEl.innerHTML = '💪 <ruby>復習<rt>ふくしゅう</rt></ruby> ' + wrongCount + '<ruby>問<rt>もん</rt></ruby>';
+                } else {
+                    badgeEl.classList.remove('status-pill-review');
+                    badgeEl.innerHTML = '<ruby>全<rt>ぜん</rt></ruby>100<ruby>問<rt>もん</rt></ruby>';
+                }
+            });
+        }
+
+        // 初回読み込み時とブラウザバック復帰時（pageshow）にバッジを更新
+        window.addEventListener('DOMContentLoaded', updateReviewBadges);
+        window.addEventListener('pageshow', updateReviewBadges);
+    </script>
+</body>
+</html>

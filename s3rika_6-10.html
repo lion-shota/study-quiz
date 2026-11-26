@@ -1,0 +1,2312 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>理科 第6回〜第10回 クイズ（全100問）</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts: M PLUS Rounded 1c & Inter -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=M+PLUS+Rounded+1c:wght@400;500;700;800&display=swap" rel="stylesheet">
+    <!-- Canvas Confetti for celebrations -->
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+    <style>
+        body {
+            font-family: 'M PLUS Rounded 1c', 'Inter', sans-serif;
+            background-color: #f0f7ff;
+            background-image: radial-gradient(#dbeafe 1.5px, transparent 1.5px);
+            background-size: 20px 20px;
+            user-select: none;
+            -webkit-tap-highlight-color: transparent;
+        }
+        /* ルビが重ならず、かつ縦幅を取りすぎないコンパクト行間設定 */
+        ruby {
+            ruby-align: center;
+        }
+        rt {
+            font-size: 0.55em;
+            font-weight: 700;
+            color: #475569;
+            line-height: 1.0;
+        }
+        .ruby-question {
+            line-height: 1.78 !important;
+        }
+        .ruby-choice {
+            line-height: 1.72 !important;
+        }
+        .ruby-explanation {
+            line-height: 1.82 !important;
+        }
+        .ruby-ui {
+            line-height: 1.55 !important;
+        }
+        .quiz-card {
+            box-shadow: 0 6px 18px -4px rgba(59, 130, 246, 0.14), 0 4px 8px -4px rgba(59, 130, 246, 0.08);
+        }
+        .choice-btn {
+            transition: all 0.12s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .choice-btn:active:not(:disabled) {
+            transform: scale(0.985);
+        }
+        @keyframes popIn {
+            0% { transform: scale(0.92); opacity: 0; }
+            70% { transform: scale(1.02); opacity: 1; }
+            100% { transform: scale(1); opacity: 1; }
+        }
+        .animate-pop {
+            animation: popIn 0.22s ease-out forwards;
+        }
+    </style>
+</head>
+<body class="min-h-screen text-slate-800 flex flex-col justify-between pb-3">
+
+    <!-- 超コンパクト・ヘッダー＆操作バー（LINE内ブラウザ対応） -->
+    <header class="bg-white/95 backdrop-blur-md border-b border-blue-100 sticky top-0 z-30 shadow-2xs">
+        <div class="max-w-3xl mx-auto px-2 sm:px-4 py-1.5 sm:py-2.5">
+            <!-- 1段目：タイトル＋成績バッジを横並び1行に凝縮 -->
+            <div class="flex items-center justify-between gap-1.5">
+                <div class="flex items-center gap-1.5 min-w-0">
+                    <span class="text-lg sm:text-2xl shrink-0">🔬</span>
+                    <h1 class="text-xs sm:text-lg font-extrabold text-blue-700 tracking-tight truncate ruby-ui">
+                        <span class="inline-block bg-blue-600 text-white text-[10px] sm:text-xs px-1.5 py-0.5 rounded-md mr-1 align-middle"><ruby>理科<rt>りか</rt></ruby> 第6回〜第10回</span>クイズ
+                    </h1>
+                </div>
+                
+                <!-- 成績バッジ（コンパクト） -->
+                <div class="flex items-center gap-1 text-[11px] sm:text-xs font-extrabold shrink-0">
+                    <div class="bg-amber-50 border border-amber-200 text-amber-700 px-1.5 sm:px-2.5 py-0.5 rounded-full flex items-center gap-0.5" title="連続正解数">
+                        <span>🔥</span><span id="combo-count">0</span>
+                    </div>
+                    <div class="bg-emerald-50 border border-emerald-200 text-emerald-700 px-1.5 sm:px-2.5 py-0.5 rounded-full flex items-center gap-0.5" title="正答率">
+                        <span>🎯</span><span id="accuracy-rate">--%</span>
+                    </div>
+                    <div class="bg-blue-50 border border-blue-200 text-blue-700 px-1.5 sm:px-2.5 py-0.5 rounded-full flex items-center gap-0.5" title="解いた問題数">
+                        <span>📝</span><span id="total-answered">0</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 2段目：出題範囲プルダウン＋復習ボタンを横並び1行に配置 -->
+            <div class="mt-1.5 pt-1.5 border-t border-slate-100 flex items-center justify-between gap-1.5">
+                <select id="filter-select" aria-label="出題範囲" class="bg-slate-50 border border-slate-200 text-slate-700 text-[11px] sm:text-sm font-bold rounded-lg px-2 py-1 focus:outline-none focus:ring-2 focus:ring-blue-400 flex-1 min-w-0 cursor-pointer">
+                    <option value="ALL">🌟 すべてランダム（全100問）</option>
+                    <optgroup label="📚 単元（回）ごとにチャレンジ">
+                        <option value="ROUND_6">🕊️ 第6回 羽のある動物（20問）</option>
+                        <option value="ROUND_7">🦎 第7回 毛も羽もない動物（20問）</option>
+                        <option value="ROUND_8">🦴 第8回 人体の不思議（20問）</option>
+                        <option value="ROUND_9">🪞 第9回 鏡で光を集めよう（20問）</option>
+                        <option value="ROUND_10">🔊 第10回 音の高さを変えてみよう（20問）</option>
+                    </optgroup>
+                    <optgroup label="🍂 テーマ別にチャレンジ">
+                        <option value="SEASON">🍁 季節の移り変わり（紅葉・種子・地下の養分・冬の天気）</option>
+                    </optgroup>
+                </select>
+
+                <!-- コンパクト復習モードボタン -->
+                <button id="review-mode-btn" onclick="toggleReviewMode()" class="text-[11px] sm:text-xs font-extrabold px-2.5 py-1 rounded-lg border transition-all flex items-center justify-center gap-1 bg-white border-rose-200 text-rose-600 hover:bg-rose-50 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer shrink-0">
+                    <span>💪</span>
+                    <span id="review-btn-text" class="ruby-ui"><ruby>復習<rt>ふくしゅう</rt></ruby>(0問)</span>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- メインクイズエリア（外枠余白を極限までスリム化） -->
+    <main class="max-w-3xl w-full mx-auto px-1.5 sm:px-4 mt-1.5 sm:mt-4 flex-1 flex flex-col">
+        
+        <!-- 復習モード通知バー -->
+        <div id="mode-banner" class="hidden mb-1.5 bg-rose-500 text-white text-[11px] sm:text-sm font-bold px-3 py-1.5 rounded-xl shadow-2xs flex items-center justify-between animate-pop">
+            <div class="flex items-center gap-1.5">
+                <span>🔥 にがて<ruby>復習<rt>ふくしゅう</rt></ruby>モード中</span>
+                <span id="review-remaining" class="bg-white/20 px-2 py-0.5 rounded-full text-[10px] sm:text-xs">のこり 0 問</span>
+            </div>
+            <button onclick="exitReviewMode()" class="underline hover:text-rose-100 text-[11px] sm:text-xs cursor-pointer">もどる</button>
+        </div>
+
+        <!-- クイズカード -->
+        <div class="bg-white rounded-2xl sm:rounded-3xl p-2.5 sm:p-6 quiz-card border border-blue-50 flex-1 flex flex-col justify-between">
+            <div>
+                <!-- 問題メタ情報（1行コンパクト） -->
+                <div class="flex items-center justify-between gap-1.5 mb-1.5 sm:mb-3">
+                    <div class="flex items-center gap-1 sm:gap-1.5 flex-wrap">
+                        <span id="q-round-badge" class="bg-indigo-100 text-indigo-700 text-[10px] sm:text-xs font-extrabold px-2 py-0.5 rounded-full">
+                            第6回
+                        </span>
+                        <span id="q-unit-badge" class="bg-blue-600 text-white text-[11px] sm:text-xs font-extrabold px-2.5 py-0.5 rounded-full">
+                            羽のある動物
+                        </span>
+                        <span id="q-category-badge" class="bg-sky-100 text-sky-700 text-[10px] sm:text-xs font-bold px-2 py-0.5 rounded-full">
+                            渡り鳥
+                        </span>
+                    </div>
+                    <span id="q-streak-badge" class="hidden text-[10px] sm:text-xs font-extrabold text-amber-600 bg-amber-100 px-2 py-0.5 rounded-full shrink-0">
+                        🔥 絶好調！
+                    </span>
+                </div>
+
+                <!-- 問題文（1画面に収まる適度な高さとサイズ） -->
+                <div class="min-h-[3.5rem] sm:min-h-[5.5rem] flex items-center mb-2 sm:mb-5">
+                    <h2 id="question-text" class="text-[14px] sm:text-xl font-extrabold text-slate-800 ruby-question">
+                        <ruby>問題<rt>もんだい</rt></ruby>を<ruby>読<rt>よ</rt></ruby>みこんでいます...
+                    </h2>
+                </div>
+
+                <!-- 4択ボタン一覧（縦幅を詰めたスリム設計） -->
+                <div id="choices-container" class="grid grid-cols-1 sm:grid-cols-2 gap-1.5 sm:gap-3">
+                    <!-- JSで動的に生成 -->
+                </div>
+            </div>
+
+            <!-- 判定＆解説エリア（回答後に表示） -->
+            <div id="feedback-area" class="hidden mt-3 sm:mt-5 pt-2.5 sm:pt-4 border-t-2 border-dashed border-slate-200 animate-pop">
+                <div id="result-header" class="flex items-center gap-2 mb-1.5">
+                    <span id="result-icon" class="text-2xl sm:text-3xl">⭕</span>
+                    <div>
+                        <p id="result-title" class="text-base sm:text-xl font-extrabold">せいかい！</p>
+                        <p id="correct-answer-sub" class="text-xs sm:text-sm font-bold text-slate-600 mt-0.5 hidden ruby-choice"></p>
+                    </div>
+                </div>
+
+                <!-- テキストの豆知識・解説ボックス -->
+                <div class="bg-amber-50/90 border border-amber-200 rounded-xl p-2.5 sm:p-3.5 mt-1.5">
+                    <div class="flex items-center gap-1 text-amber-800 font-extrabold text-[11px] sm:text-xs mb-1">
+                        <span>💡</span>
+                        <span>ポイント・<ruby>豆知識<rt>まめちしき</rt></ruby></span>
+                    </div>
+                    <p id="explanation-text" class="text-xs sm:text-sm text-slate-700 font-medium ruby-explanation">
+                        解説テキストがここに入ります。
+                    </p>
+                </div>
+
+                <!-- 次の問題へボタン -->
+                <button id="next-btn" onclick="nextQuestion()" class="mt-3 sm:mt-4 w-full bg-gradient-to-r from-blue-600 to-sky-500 hover:from-blue-700 hover:to-sky-600 text-white font-extrabold text-sm sm:text-base py-2.5 sm:py-3.5 px-4 rounded-xl shadow-md shadow-blue-500/25 transition-all flex items-center justify-center gap-1.5 cursor-pointer">
+                    <span>つぎの<ruby>問題<rt>もんだい</rt></ruby>へ</span>
+                    <span class="text-base sm:text-lg">➡️</span>
+                </button>
+            </div>
+        </div>
+    </main>
+
+    <!-- コンパクトフッター -->
+    <footer class="max-w-3xl w-full mx-auto px-2 sm:px-4 mt-2 flex items-center justify-between text-[10px] sm:text-xs text-slate-400">
+        <p class="hidden sm:block">⌨️ キーボード：[1]〜[4]で選択 / [Enter]でつぎへ</p>
+        <p class="sm:hidden">全20ページ・全100問収録</p>
+        <button onclick="resetStats()" class="hover:text-slate-600 underline cursor-pointer"><ruby>成績<rt>せいせき</rt></ruby>リセット</button>
+    </footer>
+
+    <!-- リセット確認用カスタムモーダル -->
+    <div id="reset-modal" class="hidden fixed inset-0 bg-slate-900/50 backdrop-blur-xs z-50 flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl p-5 max-w-xs w-full shadow-2xl animate-pop">
+            <h3 class="text-base font-extrabold text-slate-800 mb-1.5"><ruby>成績<rt>せいせき</rt></ruby>をリセットしますか？</h3>
+            <p class="text-xs text-slate-600 mb-4 leading-relaxed">これまでのせいかい数や<ruby>連続<rt>れんぞく</rt></ruby>きろく、まちがえた<ruby>問題<rt>もんだい</rt></ruby>リストがすべて0にもどります。</p>
+            <div class="flex gap-2.5">
+                <button onclick="closeResetModal()" class="flex-1 py-2 px-3 rounded-xl border border-slate-200 text-xs font-bold text-slate-600 hover:bg-slate-50 cursor-pointer">やめる</button>
+                <button onclick="confirmReset()" class="flex-1 py-2 px-3 rounded-xl bg-rose-500 text-xs font-bold text-white hover:bg-rose-600 cursor-pointer">リセット</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // ==========================================
+        // 理科 第6回〜第10回 全20ページ（p.21〜p.40）完全準拠 問題データベース（全100問）
+        // ==========================================
+        const quizDatabase = [
+            // ==========================================
+            // 第6回：羽のある動物（20問）p.21〜p.24
+            // ==========================================
+            {
+                id: "sci6_1",
+                round: "ROUND_6",
+                roundLabel: "第6回",
+                unit: "<ruby>羽<rt>はね</rt></ruby>のある<ruby>動物<rt>どうぶつ</rt></ruby>",
+                category: "<ruby>渡<rt>わた</rt></ruby>りをする<ruby>鳥<rt>とり</rt></ruby>",
+                isSeason: false,
+                question: "春のころ、主に<ruby>繁殖<rt>はんしょく</rt></ruby>（卵を産んでひなを育てること）のために南の地域から日本へやってくる「<ruby>夏鳥<rt>なつどり</rt></ruby>」のなかまはどれでしょう？",
+                choices: [
+                    "ツバメ・カッコウ・ホトトギス・オオルリ・キビタキ・オオヨシキリ",
+                    "オオハクチョウ・マガモ・マナヅル・ツグミ・マガン・ウソ",
+                    "スズメ・キジバト・ハシブトガラス・ライチョウ",
+                    "ウグイス・ヒバリ・ヒヨドリ"
+                ],
+                answerIndex: 0,
+                explanation: "ツバメ・カッコウ・ホトトギス・オオルリ・キビタキ・オオヨシキリは、春に南から日本へやってきて夏に見られる「<ruby>夏鳥<rt>なつどり</rt></ruby>」です。"
+            },
+            {
+                id: "sci6_2",
+                round: "ROUND_6",
+                roundLabel: "第6回",
+                unit: "<ruby>羽<rt>はね</rt></ruby>のある<ruby>動物<rt>どうぶつ</rt></ruby>",
+                category: "<ruby>渡<rt>わた</rt></ruby>りをする<ruby>鳥<rt>とり</rt></ruby>",
+                isSeason: false,
+                question: "秋のころ、主に<ruby>冬越<rt>ふゆご</rt></ruby>しのために北の地域から日本へやってくる「<ruby>冬鳥<rt>ふゆどり</rt></ruby>」のなかまはどれでしょう？",
+                choices: [
+                    "オオハクチョウ・マガモ・マナヅル・ツグミ・マガン・ウソ",
+                    "ツバメ・カッコウ・ホトトギス・オオルリ・キビタキ・オオヨシキリ",
+                    "スズメ・キジバト・ハシブトガラス",
+                    "ニワトリ・シャモ・ヤンバルクイナ"
+                ],
+                answerIndex: 0,
+                explanation: "オオハクチョウ・マガモ・マナヅル・ツグミ・マガン・ウソは、秋に北の地域からやってくる「<ruby>冬鳥<rt>ふゆどり</rt></ruby>」です。"
+            },
+            {
+                id: "sci6_3",
+                round: "ROUND_6",
+                roundLabel: "第6回",
+                unit: "<ruby>羽<rt>はね</rt></ruby>のある<ruby>動物<rt>どうぶつ</rt></ruby>",
+                category: "<ruby>渡<rt>わた</rt></ruby>りをしない<ruby>鳥<rt>とり</rt></ruby>",
+                isSeason: false,
+                question: "一年中同じ地域で生活する「<ruby>留鳥<rt>りゅうちょう</rt></ruby>」と、春から秋は<ruby>山地<rt>さんち</rt></ruby>で、秋から春は<ruby>平地<rt>へいち</rt></ruby>で過ごす「<ruby>漂鳥<rt>ひょうちょう</rt></ruby>」の正しい組み合わせはどれでしょう？",
+                choices: [
+                    "<ruby>留鳥<rt>りゅうちょう</rt></ruby>：スズメ・キジバト・ハシブトガラス ／ <ruby>漂鳥<rt>ひょうちょう</rt></ruby>：ウグイス・ヒバリ・ヒヨドリ",
+                    "<ruby>留鳥<rt>りゅうちょう</rt></ruby>：ツバメ・カッコウ・オオルリ ／ <ruby>漂鳥<rt>ひょうちょう</rt></ruby>：オオハクチョウ・マガン",
+                    "<ruby>留鳥<rt>りゅうちょう</rt></ruby>：ウグイス・ヒバリ・ヒヨドリ ／ <ruby>漂鳥<rt>ひょうちょう</rt></ruby>：スズメ・ライチョウ",
+                    "<ruby>留鳥<rt>りゅうちょう</rt></ruby>：ダチョウ・ペンギン ／ <ruby>漂鳥<rt>ひょうちょう</rt></ruby>：ツグミ・マナヅル"
+                ],
+                answerIndex: 0,
+                explanation: "スズメ・キジバト・ハシブトガラスは一年中同じ場所にすむ「<ruby>留鳥<rt>りゅうちょう</rt></ruby>」、ウグイス・ヒバリ・ヒヨドリは平地と山地の間を移動する「<ruby>漂鳥<rt>ひょうちょう</rt></ruby>」です。"
+            },
+            {
+                id: "sci6_4",
+                round: "ROUND_6",
+                roundLabel: "第6回",
+                unit: "<ruby>羽<rt>はね</rt></ruby>のある<ruby>動物<rt>どうぶつ</rt></ruby>",
+                category: "<ruby>飛<rt>と</rt></ruby>べない<ruby>鳥<rt>とり</rt></ruby>",
+                isSeason: false,
+                question: "日本に生息する「<ruby>羽<rt>はね</rt></ruby>はあるけど<ruby>飛<rt>と</rt></ruby>べない鳥」で、国の<ruby>天然記念物<rt>てんねんきねんぶつ</rt></ruby>・<ruby>絶滅危惧種<rt>ぜつめつきぐしゅ</rt></ruby>に指定されている沖縄県の鳥は何でしょう？",
+                choices: [
+                    "ヤンバルクイナ",
+                    "ライチョウ",
+                    "マナヅル",
+                    "オシドリ"
+                ],
+                answerIndex: 0,
+                explanation: "ヤンバルクイナは沖縄県に生息する飛べない鳥で、国の天然記念物に指定されています。ほかにも家畜のニワトリ・シャモや、外国のダチョウ・ヒクイドリ・ジェンツーペンギンなどが飛べない鳥です。"
+            },
+            {
+                id: "sci6_5",
+                round: "ROUND_6",
+                roundLabel: "第6回",
+                unit: "<ruby>羽<rt>はね</rt></ruby>のある<ruby>動物<rt>どうぶつ</rt></ruby>",
+                category: "<ruby>鳥<rt>とり</rt></ruby>の<ruby>体<rt>からだ</rt></ruby>のつくり",
+                isSeason: false,
+                question: "空を飛ぶ鳥と、空を飛ばない鳥の「<ruby>骨<rt>ほね</rt></ruby>」のつくりのちがいとして正しいものはどれでしょう？",
+                choices: [
+                    "空を飛ぶ鳥は体重を軽くするため骨の中にすき間が多く、飛ばない鳥はすき間が少なく丈夫である",
+                    "空を飛ぶ鳥は鉄のように重い骨をもち、飛ばない鳥はプラスチックのように軽い骨をもつ",
+                    "空を飛ぶ鳥には骨が1本もなく、飛ばない鳥だけに骨がある",
+                    "どちらも骨のつくりはまったく同じである"
+                ],
+                answerIndex: 0,
+                explanation: "空を飛ぶ鳥は体重を軽くするため骨の中が空洞（すき間が多いつくり）になっており、飛ばない鳥はすき間が少なく丈夫な骨をもっています。"
+            },
+            {
+                id: "sci6_6",
+                round: "ROUND_6",
+                roundLabel: "第6回",
+                unit: "<ruby>羽<rt>はね</rt></ruby>のある<ruby>動物<rt>どうぶつ</rt></ruby>",
+                category: "ライチョウの<ruby>羽<rt>はね</rt></ruby>の<ruby>色<rt>いろ</rt></ruby>",
+                isSeason: false,
+                question: "高い山地で見られる留鳥「ライチョウ」の夏と冬の<ruby>羽毛<rt>うもう</rt></ruby>の色の変化と、オスの特徴として正しいものはどれでしょう？",
+                choices: [
+                    "夏は<ruby>褐色<rt>かっしょく</rt></ruby>（暗い黄赤）、冬は<ruby>白色<rt>しろいろ</rt></ruby>になり、オスは目の上が赤くなっている",
+                    "夏は<ruby>白色<rt>しろいろ</rt></ruby>、冬は<ruby>真っ黒<rt>まっくろ</rt></ruby>になり、メスだけにくちばしがある",
+                    "一年中あざやかな青色をしており、冬になると南の国へ渡る",
+                    "夏は緑色、冬は金色になり、木の上に大きな巣をつくる"
+                ],
+                answerIndex: 0,
+                explanation: "ライチョウは保護色として夏は岩場にまぎれる褐色、冬は雪にまぎれる白色に変わり、オスは目の上に赤い肉冠があります。"
+            },
+            {
+                id: "sci6_7",
+                round: "ROUND_6",
+                roundLabel: "第6回",
+                unit: "<ruby>羽<rt>はね</rt></ruby>のある<ruby>動物<rt>どうぶつ</rt></ruby>",
+                category: "<ruby>求愛行動<rt>きゅうあいこうどう</rt></ruby>",
+                isSeason: false,
+                question: "鳥の世界ではふつう、オスが派手な色や羽・飾りをもち、メスは地味で目立たない色をしています。オスが目立つ羽を使ったりダンスを踊ったりする理由は何でしょう？",
+                choices: [
+                    "メスに気に入ってもらうための「<ruby>求愛行動<rt>きゅうあいこうどう</rt></ruby>」をするため",
+                    "天敵の肉食動物にわざと見つかって食べられるため",
+                    "太陽の光を集めて体をあたためるため",
+                    "水の中で速く泳ぐためのヒレにするため"
+                ],
+                answerIndex: 0,
+                explanation: "インドクジャク・オシドリ・キジ・カンムリバト・コウロコフウチョウ・オオフクチョウなどのオスは、派手な飾り羽や鳴き声・ダンスでメスに<ruby>求愛行動<rt>きゅうあいこうどう</rt></ruby>をします。"
+            },
+            {
+                id: "sci6_8",
+                round: "ROUND_6",
+                roundLabel: "第6回",
+                unit: "<ruby>羽<rt>はね</rt></ruby>のある<ruby>動物<rt>どうぶつ</rt></ruby>",
+                category: "<ruby>鳥以外<rt>とりいがい</rt></ruby>の<ruby>羽<rt>はね</rt></ruby>をもつ<ruby>動物<rt>どうぶつ</rt></ruby>",
+                isSeason: false,
+                question: "鳥と同じように羽をもち空を飛ぶ「コウモリ」が、鳥類ではなく「<ruby>ほ乳類<rt>ほにゅうるい</rt></ruby>」である証拠となる体の特徴は何でしょう？",
+                choices: [
+                    "くちばしがなく、<ruby>鼻<rt>はな</rt></ruby>やきばがあり、指と指の間にはられた<ruby>膜<rt>まく</rt></ruby>の羽をもつこと",
+                    "全身が羽毛でおおわれていて、硬い殻のある卵を産むこと",
+                    "水中でえら呼吸をして、うろこがあること",
+                    "足が6本あり、頭・胸・腹に分かれていること"
+                ],
+                answerIndex: 0,
+                explanation: "コウモリはくちばしがなく、鼻や歯（きば）があり、指と指の間の膜で飛ぶほ乳類です（世界最大のフィリピンオオコウモリは体長約1.5m）。ムササビやモモンガも膜をもつほ乳類です。"
+            },
+            {
+                id: "sci6_9",
+                round: "ROUND_6",
+                roundLabel: "第6回",
+                unit: "<ruby>羽<rt>はね</rt></ruby>のある<ruby>動物<rt>どうぶつ</rt></ruby>",
+                category: "<ruby>鳥<rt>とり</rt></ruby>の<ruby>あし<rt>あし</rt></ruby>のつくり",
+                isSeason: false,
+                question: "ツルが歩いている写真を見ると「ひざ」が後ろ向きに曲がっているように見えますが、実はその曲がっている関節はヒトの体のどの部分にあたるでしょう？",
+                choices: [
+                    "<ruby>かかと<rt>かかと</rt></ruby>（足首）",
+                    "<ruby>肩<rt>かた</rt></ruby>",
+                    "<ruby>手首<rt>てくび</rt></ruby>",
+                    "<ruby>首<rt>くび</rt></ruby>"
+                ],
+                answerIndex: 0,
+                explanation: "鳥のあしはつま先立ちで歩くつくりになっており、後ろに曲がっているように見える関節は実は「<ruby>かかと<rt>かかと</rt></ruby>」にあたります（ひざは羽毛の中に隠れて前向きに曲がっています）。"
+            },
+            {
+                id: "sci6_10",
+                round: "ROUND_6",
+                roundLabel: "第6回",
+                unit: "<ruby>羽<rt>はね</rt></ruby>のある<ruby>動物<rt>どうぶつ</rt></ruby>",
+                category: "<ruby>鳥<rt>とり</rt></ruby>と<ruby>恐竜<rt>きょうりゅう</rt></ruby>",
+                isSeason: false,
+                question: "現在の研究では、鳥類はどのような動物から<ruby>進化<rt>しんか</rt></ruby>したと考えられているでしょう？",
+                choices: [
+                    "ティラノサウルス（T-REX）のような<ruby>羽毛<rt>うもう</rt></ruby>をもつ<ruby>恐竜<rt>きょうりゅう</rt></ruby>",
+                    "海の中で泳いでいたクジラやイルカ",
+                    "地中で生活していたモグラやネズミ",
+                    "水辺で暮らしていたカエルやサンショウウオ"
+                ],
+                answerIndex: 0,
+                explanation: "一部の恐竜には鳥のような羽毛をもつ証拠が見つかっており、鳥類は恐竜が進化した動物（恐竜の一種）と考えられています。"
+            },
+            {
+                id: "sci6_11",
+                round: "ROUND_6",
+                roundLabel: "第6回",
+                unit: "<ruby>羽<rt>はね</rt></ruby>のある<ruby>動物<rt>どうぶつ</rt></ruby>",
+                category: "<ruby>季節<rt>きせつ</rt></ruby>の<ruby>移<rt>うつ</rt></ruby>り<ruby>変<rt>か</rt></ruby>わり",
+                isSeason: true,
+                question: "テキストの「<ruby>季節<rt>きせつ</rt></ruby>の<ruby>移<rt>うつ</rt></ruby>り<ruby>変<rt>か</rt></ruby>わり⑯ <ruby>紅葉<rt>こうよう</rt></ruby>」で紹介されている、「<ruby>赤<rt>あか</rt></ruby>く<ruby>染<rt>そ</rt></ruby>まる<ruby>樹木<rt>じゅもく</rt></ruby>」4つの正しい組み合わせはどれでしょう？",
+                choices: [
+                    "カエデ・ツタ・ニシキギ・ツツジ",
+                    "イチョウ・ポプラ・クリ・ケヤキ",
+                    "マツ・スギ・ヒノキ・サクラ",
+                    "ウメ・モモ・ミカン・カキ"
+                ],
+                answerIndex: 0,
+                explanation: "カエデ・ツタ・ニシキギ・ツツジは秋に葉が「<ruby>赤<rt>あか</rt></ruby>く染まる樹木」です。"
+            },
+            {
+                id: "sci6_12",
+                round: "ROUND_6",
+                roundLabel: "第6回",
+                unit: "<ruby>羽<rt>はね</rt></ruby>のある<ruby>動物<rt>どうぶつ</rt></ruby>",
+                category: "<ruby>季節<rt>きせつ</rt></ruby>の<ruby>移<rt>うつ</rt></ruby>り<ruby>変<rt>か</rt></ruby>わり",
+                isSeason: true,
+                question: "テキストの「<ruby>季節<rt>きせつ</rt></ruby>の<ruby>移<rt>うつ</rt></ruby>り<ruby>変<rt>か</rt></ruby>わり⑯ <ruby>紅葉<rt>こうよう</rt></ruby>」で紹介されている、「<ruby>黄色<rt>きいろ</rt></ruby>く<ruby>染<rt>そ</rt></ruby>まる<ruby>樹木<rt>じゅもく</rt></ruby>」2つの組み合わせはどれでしょう？",
+                choices: [
+                    "イチョウ・ポプラ",
+                    "カエデ・ツタ",
+                    "ニシキギ・ツツジ",
+                    "スギ・ヒノキ"
+                ],
+                answerIndex: 0,
+                explanation: "イチョウとポプラは秋に葉が「<ruby>黄色<rt>きいろ</rt></ruby>く染まる樹木（黄葉）」です。"
+            },
+            {
+                id: "sci6_13",
+                round: "ROUND_6",
+                roundLabel: "第6回",
+                unit: "<ruby>羽<rt>はね</rt></ruby>のある<ruby>動物<rt>どうぶつ</rt></ruby>",
+                category: "<ruby>鳥<rt>とり</rt></ruby>の<ruby>見<rt>み</rt></ruby>られる<ruby>季節<rt>きせつ</rt></ruby>",
+                isSeason: false,
+                question: "次の鳥のうち、「冬に平地で見ることができない」鳥（夏鳥や高山にすむ鳥）の組み合わせはどれでしょう？",
+                choices: [
+                    "ツバメ（夏鳥）・ライチョウ（高山の留鳥）",
+                    "スズメ（留鳥）・マガモ（冬鳥）",
+                    "オオハクチョウ（冬鳥）・ツグミ（冬鳥）",
+                    "ウグイス（漂鳥）・キジバト（留鳥）"
+                ],
+                answerIndex: 0,
+                explanation: "ツバメは冬には南の国へ渡り、ライチョウは高い山の上で冬を越すため、どちらも冬に平地で見ることはできません。"
+            },
+            {
+                id: "sci6_14",
+                round: "ROUND_6",
+                roundLabel: "第6回",
+                unit: "<ruby>羽<rt>はね</rt></ruby>のある<ruby>動物<rt>どうぶつ</rt></ruby>",
+                category: "<ruby>中生代<rt>ちゅうせいだい</rt></ruby>の<ruby>動物<rt>どうぶつ</rt></ruby>",
+                isSeason: false,
+                question: "<ruby>中生代<rt>ちゅうせいだい</rt></ruby>に生息し、コウモリのように指の間にはられた膜のような翼をもって空を飛んでいた動物を何というでしょう？",
+                choices: [
+                    "<ruby>翼竜<rt>よくりゅう</rt></ruby>のなかま",
+                    "<ruby>両生類<rt>りょうせいるい</rt></ruby>のなかま",
+                    "<ruby>魚類<rt>ぎょるい</rt></ruby>のなかま",
+                    "<ruby>軟体動物<rt>なんたいどうぶつ</rt></ruby>のなかま"
+                ],
+                answerIndex: 0,
+                explanation: "中生代に生息した<ruby>翼竜<rt>よくりゅう</rt></ruby>のなかまも膜のような羽をもっていました（翼竜は恐竜や鳥類とは別のグループです）。"
+            },
+            {
+                id: "sci6_15",
+                round: "ROUND_6",
+                roundLabel: "第6回",
+                unit: "<ruby>羽<rt>はね</rt></ruby>のある<ruby>動物<rt>どうぶつ</rt></ruby>",
+                category: "<ruby>鳥<rt>とり</rt></ruby>の<ruby>呼吸<rt>こきゅう</rt></ruby>",
+                isSeason: false,
+                question: "鳥が長い時間空を飛び続けることができる理由の1つは、他の動物と比べてどのようなつくりが優れているからでしょう？",
+                choices: [
+                    "<ruby>呼吸<rt>こきゅう</rt></ruby>するつくり（空気のうなどがあり、効率よく酸素を取りこめる）",
+                    "水中でえらを使って呼吸するつくり",
+                    "皮膚から光合成をして栄養をつくるつくり",
+                    "1か月に1回しか息をしなくてよい冬眠のつくり"
+                ],
+                answerIndex: 0,
+                explanation: "鳥は肺のほかに空気をためる袋（気嚢）があり、他の動物と比べて<ruby>呼吸<rt>こきゅう</rt></ruby>するつくりが優れているため、長い時間空を飛び続けることができます。"
+            },
+            {
+                id: "sci6_16",
+                round: "ROUND_6",
+                roundLabel: "第6回",
+                unit: "<ruby>羽<rt>はね</rt></ruby>のある<ruby>動物<rt>どうぶつ</rt></ruby>",
+                category: "<ruby>外国<rt>がいこく</rt></ruby>の<ruby>飛<rt>と</rt></ruby>べない<ruby>鳥<rt>とり</rt></ruby>",
+                isSeason: false,
+                question: "テキストで紹介されている「日本以外の地域に生息する飛べない鳥」3つと、その生息地の正しい組み合わせはどれでしょう？",
+                choices: [
+                    "ダチョウ（アフリカ大陸）・ヒクイドリ（オーストラリア）・ジェンツーペンギン（南極）",
+                    "ダチョウ（南極）・ヒクイドリ（北極）・ジェンツーペンギン（アフリカ大陸）",
+                    "ヤンバルクイナ（アフリカ大陸）・ニワトリ（南極）・シャモ（オーストラリア）",
+                    "インドクジャク（南極）・カンムリバト（北極）・オシドリ（オーストラリア）"
+                ],
+                answerIndex: 0,
+                explanation: "アフリカ大陸のダチョウ、オーストラリアのヒクイドリ、南極のジェンツーペンギンなどが飛べない鳥として紹介されています。"
+            },
+            {
+                id: "sci6_17",
+                round: "ROUND_6",
+                roundLabel: "第6回",
+                unit: "<ruby>羽<rt>はね</rt></ruby>のある<ruby>動物<rt>どうぶつ</rt></ruby>",
+                category: "<ruby>滑空<rt>かっくう</rt></ruby>する<ruby>ほ乳類<rt>ほにゅうるい</rt></ruby>",
+                isSeason: false,
+                question: "手と足の間に膜（飛膜）を広げて木から木へと滑空する、昔は鳥類に分類されていたこともある日本のほ乳類2つは何でしょう？",
+                choices: [
+                    "ムササビ・モモンガ",
+                    "ハダカデバネズミ・アカネズミ",
+                    "カモノハシ・ハリモグラ",
+                    "テン・イタチ"
+                ],
+                answerIndex: 0,
+                explanation: "ムササビやモモンガは空を飛ぶ（滑空する）ための膜をもつほ乳類です。"
+            },
+            {
+                id: "sci6_18",
+                round: "ROUND_6",
+                roundLabel: "第6回",
+                unit: "<ruby>羽<rt>はね</rt></ruby>のある<ruby>動物<rt>どうぶつ</rt></ruby>",
+                category: "<ruby>鳥<rt>とり</rt></ruby>の<ruby>羽<rt>はね</rt></ruby>のつくり",
+                isSeason: false,
+                question: "コウモリの羽が「指と指の間にはられた膜」でできているのに対し、鳥の羽は何でおおわれているでしょう？",
+                choices: [
+                    "<ruby>羽毛<rt>うもう</rt></ruby>",
+                    "硬いウロコ",
+                    "ぬれた皮ふ",
+                    "貝殻"
+                ],
+                answerIndex: 0,
+                explanation: "鳥の羽は「<ruby>羽毛<rt>うもう</rt></ruby>」におおわれており、体温を保ったり空を飛んだりするのに役立っています。"
+            },
+            {
+                id: "sci6_19",
+                round: "ROUND_6",
+                roundLabel: "第6回",
+                unit: "<ruby>羽<rt>はね</rt></ruby>のある<ruby>動物<rt>どうぶつ</rt></ruby>",
+                category: "<ruby>渡<rt>わた</rt></ruby>りの<ruby>意味<rt>いみ</rt></ruby>",
+                isSeason: false,
+                question: "鳥が季節によって別の国や地域から長い距離を移動する「<ruby>渡<rt>わた</rt></ruby>り」をする主な目的は何でしょう？",
+                choices: [
+                    "日本で<ruby>繁殖<rt>はんしょく</rt></ruby>（子育て）をしたり、寒い冬を越したり（<ruby>冬越<rt>ふゆご</rt></ruby>し）するため",
+                    "人間の飛行機と競争してスピードをくらべるため",
+                    "海水浴をして羽のよごれを落とすため",
+                    "日本の紅葉を観光して楽しむため"
+                ],
+                answerIndex: 0,
+                explanation: "夏鳥は繁殖のために、冬鳥は食べ物が少なくなる北の地域の冬を越すために日本へ渡ってきます。"
+            },
+            {
+                id: "sci6_20",
+                round: "ROUND_6",
+                roundLabel: "第6回",
+                unit: "<ruby>羽<rt>はね</rt></ruby>のある<ruby>動物<rt>どうぶつ</rt></ruby>",
+                category: "<ruby>漂鳥<rt>ひょうちょう</rt></ruby>の<ruby>扱<rt>あつか</rt></ruby>い",
+                isSeason: false,
+                question: "ウグイスやヒバリ・ヒヨドリのように、移動する距離が短い「<ruby>漂鳥<rt>ひょうちょう</rt></ruby>」は、観察する場所によってはどのグループとして扱われる場合があるでしょう？",
+                choices: [
+                    "<ruby>留鳥<rt>りゅうちょう</rt></ruby>",
+                    "<ruby>飛<rt>と</rt></ruby>べない鳥",
+                    "<ruby>ほ乳類<rt>ほにゅうるい</rt></ruby>",
+                    "<ruby>は虫類<rt>はちゅうるい</rt></ruby>"
+                ],
+                answerIndex: 0,
+                explanation: "移動する距離が短い漂鳥は、一年中見られる地域では「<ruby>留鳥<rt>りゅうちょう</rt></ruby>」として扱われる場合があります。"
+            },
+
+            // ==========================================
+            // 第7回：毛も羽もない動物（20問）p.25〜p.28
+            // ==========================================
+            {
+                id: "sci7_1",
+                round: "ROUND_7",
+                roundLabel: "第7回",
+                unit: "<ruby>毛<rt>け</rt></ruby>も<ruby>羽<rt>はね</rt></ruby>もない<ruby>動物<rt>どうぶつ</rt></ruby>",
+                category: "<ruby>変温動物<rt>へんおんどうぶつ</rt></ruby>",
+                isSeason: false,
+                question: "魚類・両生類・は虫類・昆虫などのように、毛や羽がなく、まわりの空気や水の温度によって体温が変化する動物を何というでしょう？",
+                choices: [
+                    "<ruby>変温動物<rt>へんおんどうぶつ</rt></ruby>",
+                    "<ruby>恒温動物<rt>こうおんどうぶつ</rt></ruby>",
+                    "<ruby>有袋類<rt>ゆうたいるい</rt></ruby>",
+                    "<ruby>単孔類<rt>たんこうるい</rt></ruby>"
+                ],
+                answerIndex: 0,
+                explanation: "体温を一定に保つことが難しく、まわりの温度によって体温が変わる動物を「<ruby>変温動物<rt>へんおんどうぶつ</rt></ruby>」、ほ乳類や鳥類のように一定に保つ動物を「<ruby>恒温動物<rt>こうおんどうぶつ</rt></ruby>」といいます。"
+            },
+            {
+                id: "sci7_2",
+                round: "ROUND_7",
+                roundLabel: "第7回",
+                unit: "<ruby>毛<rt>け</rt></ruby>も<ruby>羽<rt>はね</rt></ruby>もない<ruby>動物<rt>どうぶつ</rt></ruby>",
+                category: "<ruby>卵<rt>たまご</rt></ruby>のつくり",
+                isSeason: false,
+                question: "魚類・両生類・は虫類の「<ruby>卵<rt>たまご</rt></ruby>」のつくりのちがいとして正しいものはどれでしょう？",
+                choices: [
+                    "魚類と両生類の卵には<ruby>殻<rt>から</rt></ruby>がなく、は虫類の卵には<ruby>殻<rt>から</rt></ruby>がある",
+                    "魚類と両生類の卵には硬い殻があり、は虫類の卵には殻がない",
+                    "3つのグループともすべて殻のない卵を水中に産む",
+                    "3つのグループともすべて親と同じ姿で赤ちゃんを産む"
+                ],
+                answerIndex: 0,
+                explanation: "水中に卵を産む魚類・両生類の卵には<ruby>殻<rt>から</rt></ruby>がなく、陸上に卵を産むは虫類（カメ・ワニ・トカゲ・ヘビなど）の卵には乾燥を防ぐ<ruby>殻<rt>から</rt></ruby>があります。"
+            },
+            {
+                id: "sci7_3",
+                round: "ROUND_7",
+                roundLabel: "第7回",
+                unit: "<ruby>毛<rt>け</rt></ruby>も<ruby>羽<rt>はね</rt></ruby>もない<ruby>動物<rt>どうぶつ</rt></ruby>",
+                category: "<ruby>呼吸<rt>こきゅう</rt></ruby>のしかた",
+                isSeason: false,
+                question: "両生類（カエル・イモリ・サンショウウオなど）の「子どものころ（幼生）」と「成長したあと（成体）」の呼吸のしかたの組み合わせはどれでしょう？",
+                choices: [
+                    "子どものころ：<ruby>えら<rt>えら</rt></ruby>で呼吸 ／ 成長したあと：<ruby>肺<rt>はい</rt></ruby>と<ruby>皮<rt>ひ</rt></ruby>ふで呼吸",
+                    "子どものころ：<ruby>肺<rt>はい</rt></ruby>で呼吸 ／ 成長したあと：<ruby>えら<rt>えら</rt></ruby>で呼吸",
+                    "一生ずっと<ruby>えら<rt>えら</rt></ruby>だけで呼吸する",
+                    "一生ずっと<ruby>肺<rt>はい</rt></ruby>だけで呼吸する"
+                ],
+                answerIndex: 0,
+                explanation: "両生類は子どものころは水中で「<ruby>えら<rt>えら</rt></ruby>」呼吸をし、成長すると「<ruby>肺<rt>はい</rt></ruby>と<ruby>皮<rt>ひ</rt></ruby>ふ」で呼吸をします。魚類は一生えら呼吸、は虫類は一生肺呼吸です。"
+            },
+            {
+                id: "sci7_4",
+                round: "ROUND_7",
+                roundLabel: "第7回",
+                unit: "<ruby>毛<rt>け</rt></ruby>も<ruby>羽<rt>はね</rt></ruby>もない<ruby>動物<rt>どうぶつ</rt></ruby>",
+                category: "<ruby>外来種<rt>がいらいしゅ</rt></ruby>と<ruby>絶滅危惧種<rt>ぜつめつきぐしゅ</rt></ruby>",
+                isSeason: false,
+                question: "外国から日本に持ちこまれて数を増やし、駆除の対象となる「<ruby>特定外来生物<rt>とくていがいらいせいぶつ</rt></ruby>」に指定されている3つの動物はどれでしょう？",
+                choices: [
+                    "オオクチバス（ブラックバス）・ウシガエル・カミツキガメ",
+                    "イトウ・イボイモリ・アオウミガメ",
+                    "メダカ・サケ・オオサンショウウオ",
+                    "ニホンヤモリ・アカハライモリ・カナヘビ"
+                ],
+                answerIndex: 0,
+                explanation: "オオクチバス・ウシガエル・カミツキガメは特定外来生物に指定されています。一方、日本に古くからすむイトウ・イボイモリ・アオウミガメなどは数を減らし「<ruby>絶滅危惧種<rt>ぜつめつきぐしゅ</rt></ruby>」に指定されています。"
+            },
+            {
+                id: "sci7_5",
+                round: "ROUND_7",
+                roundLabel: "第7回",
+                unit: "<ruby>毛<rt>け</rt></ruby>も<ruby>羽<rt>はね</rt></ruby>もない<ruby>動物<rt>どうぶつ</rt></ruby>",
+                category: "ウミヘビの<ruby>分類<rt>ぶんるい</rt></ruby>",
+                isSeason: false,
+                question: "「ウミヘビ」と呼ばれる動物には、は虫類（毒をもつヘビの仲間）と魚類（ウナギやアナゴの仲間）がいます。「<ruby>魚類<rt>ぎょるい</rt></ruby>のウミヘビ」はどれでしょう？",
+                choices: [
+                    "モンガラドオシ・ホタテウミヘビ・ダイナンウミヘビ",
+                    "エラブウミヘビ・ヒロオウミヘビ・クロガシラウミヘビ",
+                    "アオダイショウ・シマヘビ・マムシ",
+                    "アミメニシキヘビ・コブラ・アナコンダ"
+                ],
+                answerIndex: 0,
+                explanation: "エラブウミヘビ・ヒロオウミヘビ・クロガシラウミヘビは毒をもつ「は虫類」、モンガラドオシ・ホタテウミヘビ・ダイナンウミヘビはウナギやアナゴに近い「<ruby>魚類<rt>ぎょるい</rt></ruby>」です。"
+            },
+            {
+                id: "sci7_6",
+                round: "ROUND_7",
+                roundLabel: "第7回",
+                unit: "<ruby>毛<rt>け</rt></ruby>も<ruby>羽<rt>はね</rt></ruby>もない<ruby>動物<rt>どうぶつ</rt></ruby>",
+                category: "ヤモリとイモリ",
+                isSeason: false,
+                question: "名前が似ていて間違えやすい「ヤモリ」と「イモリ」のちがいとして正しいものはどれでしょう？",
+                choices: [
+                    "ヤモリは漢字で「家守」と書く<ruby>は虫類<rt>はちゅうるい</rt></ruby>（肌は乾いている）、イモリは「井守」と書く<ruby>両生類<rt>りょうせいるい</rt></ruby>（肌は湿っている）",
+                    "ヤモリは水中にすむ<ruby>魚類<rt>ぎょるい</rt></ruby>、イモリは空を飛ぶ<ruby>鳥類<rt>ちょうるい</rt></ruby>である",
+                    "ヤモリは<ruby>両生類<rt>りょうせいるい</rt></ruby>で尾が平たく、イモリは<ruby>は虫類<rt>はちゅうるい</rt></ruby>で指に吸盤がある",
+                    "どちらも同じ動物のオスとメスの呼び方である"
+                ],
+                answerIndex: 0,
+                explanation: "ヤモリ（家守）は壁に張りつくつめをもつ「は虫類」で肌が乾いており、イモリ（井守）は水辺にすむ「両生類」で泳ぐのに適した平たい尾をもち肌が湿っています。"
+            },
+            {
+                id: "sci7_7",
+                round: "ROUND_7",
+                roundLabel: "第7回",
+                unit: "<ruby>毛<rt>け</rt></ruby>も<ruby>羽<rt>はね</rt></ruby>もない<ruby>動物<rt>どうぶつ</rt></ruby>",
+                category: "<ruby>最大<rt>さいだい</rt></ruby>の<ruby>動物<rt>どうぶつ</rt></ruby>",
+                isSeason: false,
+                question: "現在生息している中で最大の「<ruby>魚類<rt>ぎょるい</rt></ruby>」・最大の「<ruby>両生類<rt>りょうせいるい</rt></ruby>」・最大の「<ruby>は虫類<rt>はちゅうるい</rt></ruby>」の正しい組み合わせはどれでしょう？",
+                choices: [
+                    "魚類：ジンベエザメ ／ 両生類：オオサンショウウオ ／ は虫類：イリエワニ・アミメニシキヘビ",
+                    "魚類：シロナガスクジラ ／ 両生類：ウシガエル ／ は虫類：アオウミガメ",
+                    "魚類：マグロ ／ 両生類：アカハライモリ ／ は虫類：ニホンヤモリ",
+                    "魚類：サケ ／ 両生類：サイレン ／ は虫類：カナヘビ"
+                ],
+                answerIndex: 0,
+                explanation: "最大は、魚類がジンベエザメ（最大20m、プランクトンを食べる）、両生類が日本のオオサンショウウオ（最大1.5m）、は虫類がイリエワニ（7m）やアミメニシキヘビ（10m）です。"
+            },
+            {
+                id: "sci7_8",
+                round: "ROUND_7",
+                roundLabel: "第7回",
+                unit: "<ruby>毛<rt>け</rt></ruby>も<ruby>羽<rt>はね</rt></ruby>もない<ruby>動物<rt>どうぶつ</rt></ruby>",
+                category: "<ruby>変温動物<rt>へんおんどうぶつ</rt></ruby>の<ruby>食事量<rt>しょくじりょう</rt></ruby>",
+                isSeason: false,
+                question: "同じ体重のほ乳類とくらべて、は虫類（ワニやヘビなど）が1日に食べるエサの量が圧倒的に少ないのはなぜでしょう？",
+                choices: [
+                    "<ruby>変温動物<rt>へんおんどうぶつ</rt></ruby>であり、自分で体温を一定に保つためのエネルギーを使わなくてすむから",
+                    "は虫類は胃や腸がまったくなく、食べたものを消化できないから",
+                    "は虫類は毎日100km以上走り回っているから",
+                    "は虫類は太陽の光だけで光合成ができるから"
+                ],
+                answerIndex: 0,
+                explanation: "ほ乳類や鳥類（恒温動物）は体温を保つために多くのエネルギー（食事）を必要としますが、変温動物であるは虫類は体温を保つエネルギーがいらないため少ないエサで生きていけます。"
+            },
+            {
+                id: "sci7_9",
+                round: "ROUND_7",
+                roundLabel: "第7回",
+                unit: "<ruby>毛<rt>け</rt></ruby>も<ruby>羽<rt>はね</rt></ruby>もない<ruby>動物<rt>どうぶつ</rt></ruby>",
+                category: "<ruby>生<rt>い</rt></ruby>きている<ruby>化石<rt>かせき</rt></ruby>",
+                isSeason: false,
+                question: "化石で見つかる大昔の姿と現在生きている姿がほとんど変わっていない「<ruby>生<rt>い</rt></ruby>きている<ruby>化石<rt>かせき</rt></ruby>」とよばれる動物の例はどれでしょう？",
+                choices: [
+                    "シーラカンス・ゾウガメ",
+                    "シロナガスクジラ・チーター",
+                    "スミロドン・ティラノサウルス",
+                    "ツバメ・ペンギン"
+                ],
+                answerIndex: 0,
+                explanation: "シーラカンスやゾウガメ、カブトガニ、イチョウやメタセコイア（植物）などは「<ruby>生<rt>い</rt></ruby>きている<ruby>化石<rt>かせき</rt></ruby>」とよばれます。"
+            },
+            {
+                id: "sci7_10",
+                round: "ROUND_7",
+                roundLabel: "第7回",
+                unit: "<ruby>毛<rt>け</rt></ruby>も<ruby>羽<rt>はね</rt></ruby>もない<ruby>動物<rt>どうぶつ</rt></ruby>",
+                category: "<ruby>季節<rt>きせつ</rt></ruby>の<ruby>移<rt>うつ</rt></ruby>り<ruby>変<rt>か</rt></ruby>わり",
+                isSeason: true,
+                question: "テキストの「<ruby>季節<rt>きせつ</rt></ruby>の<ruby>移<rt>うつ</rt></ruby>り<ruby>変<rt>か</rt></ruby>わり⑰ <ruby>種子<rt>しゅし</rt></ruby>の<ruby>運<rt>はこ</rt></ruby>ばれ<ruby>方<rt>かた</rt></ruby>①」で紹介されている、「<ruby>風<rt>かぜ</rt></ruby>で<ruby>飛<rt>と</rt></ruby>ぶ<ruby>種子<rt>しゅし</rt></ruby>」4つの正しい組み合わせはどれでしょう？",
+                choices: [
+                    "カエデ・マツ・ススキ・ポプラ",
+                    "オナモミ・センダングサ・ヌスビトハギ",
+                    "シイ・カシ・クヌギ・コナラ",
+                    "ホウセンカ・カタバミ・ツリフネソウ"
+                ],
+                answerIndex: 0,
+                explanation: "翼をもつカエデ・マツや、綿毛をもつススキ・ポプラは「<ruby>風<rt>かぜ</rt></ruby>で<ruby>飛<rt>と</rt></ruby>ぶ<ruby>種子<rt>しゅし</rt></ruby>」です。"
+            },
+            {
+                id: "sci7_11",
+                round: "ROUND_7",
+                roundLabel: "第7回",
+                unit: "<ruby>毛<rt>け</rt></ruby>も<ruby>羽<rt>はね</rt></ruby>もない<ruby>動物<rt>どうぶつ</rt></ruby>",
+                category: "<ruby>季節<rt>きせつ</rt></ruby>の<ruby>移<rt>うつ</rt></ruby>り<ruby>変<rt>か</rt></ruby>わり",
+                isSeason: true,
+                question: "とげやカギのようなつくりをもち、衣服や動物の毛にくっついて運ばれる「<ruby>動物<rt>どうぶつ</rt></ruby>につく<ruby>種子<rt>しゅし</rt></ruby>（ひっつき虫）」として紹介されている2つはどれでしょう？",
+                choices: [
+                    "オナモミ・センダングサ",
+                    "カエデ・マツ",
+                    "ススキ・ポプラ",
+                    "ホウセンカ・カタバミ"
+                ],
+                answerIndex: 0,
+                explanation: "オナモミとセンダングサは「<ruby>動物<rt>どうぶつ</rt></ruby>につく<ruby>種子<rt>しゅし</rt></ruby>」です。"
+            },
+            {
+                id: "sci7_12",
+                round: "ROUND_7",
+                roundLabel: "第7回",
+                unit: "<ruby>毛<rt>け</rt></ruby>も<ruby>羽<rt>はね</rt></ruby>もない<ruby>動物<rt>どうぶつ</rt></ruby>",
+                category: "<ruby>動物<rt>どうぶつ</rt></ruby>の<ruby>分類<rt>ぶんるい</rt></ruby>",
+                isSeason: false,
+                question: "次の動物のうち、「<ruby>両生類<rt>りょうせいるい</rt></ruby>」に分類されるものの正しい組み合わせはどれでしょう？",
+                choices: [
+                    "カエル・イモリ・サンショウウオ・サイレン",
+                    "カメ・ワニ・トカゲ・ヘビ",
+                    "メダカ・サケ・サメ・ウナギ",
+                    "イルカ・クジラ・アザラシ・カモノハシ"
+                ],
+                answerIndex: 0,
+                explanation: "カエル・イモリ・サンショウウオ・サイレンは「<ruby>両生類<rt>りょうせいるい</rt></ruby>」のなかまです。"
+            },
+            {
+                id: "sci7_13",
+                round: "ROUND_7",
+                roundLabel: "第7回",
+                unit: "<ruby>毛<rt>け</rt></ruby>も<ruby>羽<rt>はね</rt></ruby>もない<ruby>動物<rt>どうぶつ</rt></ruby>",
+                category: "<ruby>動物<rt>どうぶつ</rt></ruby>の<ruby>分類<rt>ぶんるい</rt></ruby>",
+                isSeason: false,
+                question: "海で生活する「ウミガメ」は、魚類・両生類・は虫類・ほ乳類のどのグループに分類されるでしょう？",
+                choices: [
+                    "<ruby>は虫類<rt>はちゅうるい</rt></ruby>（陸の砂浜に殻のある卵を産み、肺で呼吸するから）",
+                    "<ruby>魚類<rt>ぎょるい</rt></ruby>（海の中で泳いで生活しているから）",
+                    "<ruby>両生類<rt>りょうせいるい</rt></ruby>（海と陸の両方に行くから）",
+                    "<ruby>ほ乳類<rt>ほにゅうるい</rt></ruby>（母乳で子どもを育てるから）"
+                ],
+                answerIndex: 0,
+                explanation: "ウミガメは海で生活していますが、砂浜に殻のある卵を産み、一生肺で呼吸をする「<ruby>は虫類<rt>はちゅうるい</rt></ruby>」です。"
+            },
+            {
+                id: "sci7_14",
+                round: "ROUND_7",
+                roundLabel: "第7回",
+                unit: "<ruby>毛<rt>け</rt></ruby>も<ruby>羽<rt>はね</rt></ruby>もない<ruby>動物<rt>どうぶつ</rt></ruby>",
+                category: "<ruby>動物<rt>どうぶつ</rt></ruby>の<ruby>分類<rt>ぶんるい</rt></ruby>",
+                isSeason: false,
+                question: "細長い体をした「ウナギ」は、魚類・両生類・は虫類のどのグループに分類されるでしょう？",
+                choices: [
+                    "<ruby>魚類<rt>ぎょるい</rt></ruby>（殻のない卵を産み、一生えらで呼吸するから）",
+                    "<ruby>は虫類<rt>はちゅうるい</rt></ruby>（ヘビに似た細長い体をしているから）",
+                    "<ruby>両生類<rt>りょうせいるい</rt></ruby>（川と海の両方に行くから）",
+                    "<ruby>昆虫<rt>こんちゅう</rt></ruby>（川底の泥の中にすんでいるから）"
+                ],
+                answerIndex: 0,
+                explanation: "ウナギはヘビに似ていますが、えらで呼吸するれっきとした「<ruby>魚類<rt>ぎょるい</rt></ruby>」です。"
+            },
+            {
+                id: "sci7_15",
+                round: "ROUND_7",
+                roundLabel: "第7回",
+                unit: "<ruby>毛<rt>け</rt></ruby>も<ruby>羽<rt>はね</rt></ruby>もない<ruby>動物<rt>どうぶつ</rt></ruby>",
+                category: "<ruby>動物<rt>どうぶつ</rt></ruby>の<ruby>分類<rt>ぶんるい</rt></ruby>",
+                isSeason: false,
+                question: "「サメ」は卵ではなく親と似た姿で生まれる種類もいますが、どのグループに分類されるでしょう？",
+                choices: [
+                    "<ruby>魚類<rt>ぎょるい</rt></ruby>（えらで呼吸をするから）",
+                    "<ruby>ほ乳類<rt>ほにゅうるい</rt></ruby>（親と似た姿で生まれるから）",
+                    "<ruby>は虫類<rt>はちゅうるい</rt></ruby>（鋭い歯をもっているから）",
+                    "<ruby>両生類<rt>りょうせいるい</rt></ruby>（皮ふで呼吸をするから）"
+                ],
+                answerIndex: 0,
+                explanation: "サメはえらで呼吸をする「<ruby>魚類<rt>ぎょるい</rt></ruby>」のなかまです。"
+            },
+            {
+                id: "sci7_16",
+                round: "ROUND_7",
+                roundLabel: "第7回",
+                unit: "<ruby>毛<rt>け</rt></ruby>も<ruby>羽<rt>はね</rt></ruby>もない<ruby>動物<rt>どうぶつ</rt></ruby>",
+                category: "<ruby>変温動物<rt>へんおんどうぶつ</rt></ruby>の<ruby>冬眠<rt>とうみん</rt></ruby>",
+                isSeason: false,
+                question: "カエルやヘビなどの変温動物が、冬になると土の中や落ち葉の下にもぐってじっと動かなくなる（<ruby>冬眠<rt>とうみん</rt></ruby>する）のはなぜでしょう？",
+                choices: [
+                    "気温が下がると体温も下がってしまい、活発に動けなくなるから",
+                    "冬の間だけ水中でえら呼吸をするようになるから",
+                    "毛や羽を生やすために土の中で待っているから",
+                    "冬の間は体が10倍の大きさに成長するから"
+                ],
+                answerIndex: 0,
+                explanation: "変温動物はまわりの温度が下がると体温も下がって活動できなくなるため、冬は土の中などで<ruby>冬眠<rt>とうみん</rt></ruby>をします。"
+            },
+            {
+                id: "sci7_17",
+                round: "ROUND_7",
+                roundLabel: "第7回",
+                unit: "<ruby>毛<rt>け</rt></ruby>も<ruby>羽<rt>はね</rt></ruby>もない<ruby>動物<rt>どうぶつ</rt></ruby>",
+                category: "<ruby>昆虫<rt>こんちゅう</rt></ruby>と<ruby>セキツイ動物<rt>セキツイどうぶつ</rt></ruby>",
+                isSeason: false,
+                question: "魚類・両生類・は虫類・鳥類・ほ乳類には共通して体の中にありますが、昆虫やカタツムリにはないものは何でしょう？",
+                choices: [
+                    "<ruby>背骨<rt>せぼね</rt></ruby>（セキツイ）",
+                    "<ruby>目<rt>め</rt></ruby>や<ruby>口<rt>くち</rt></ruby>",
+                    "<ruby>呼吸<rt>こきゅう</rt></ruby>するしくみ",
+                    "<ruby>卵<rt>たまご</rt></ruby>を産むしくみ"
+                ],
+                answerIndex: 0,
+                explanation: "魚類・両生類・は虫類・鳥類・ほ乳類はすべて背骨をもつ「セキツイ動物」ですが、昆虫やカタツムリには背骨がありません。"
+            },
+            {
+                id: "sci7_18",
+                round: "ROUND_7",
+                roundLabel: "第7回",
+                unit: "<ruby>毛<rt>け</rt></ruby>も<ruby>羽<rt>はね</rt></ruby>もない<ruby>動物<rt>どうぶつ</rt></ruby>",
+                category: "<ruby>最大<rt>さいだい</rt></ruby>の<ruby>魚類<rt>ぎょるい</rt></ruby>",
+                isSeason: false,
+                question: "体長が20mほどになる世界最大の魚「ジンベエザメ」は、その巨大な体に似合わず何をエサにしているでしょう？",
+                choices: [
+                    "オキアミなどの小さなプランクトン",
+                    "シロナガスクジラやシャチ",
+                    "大型のウミガメやワニ",
+                    "海の底の岩やサンゴ"
+                ],
+                answerIndex: 0,
+                explanation: "ジンベエザメは大きな口を開けて海水ごと吸いこみ、オキアミなどの小さなプランクトンを食べています。"
+            },
+            {
+                id: "sci7_19",
+                round: "ROUND_7",
+                roundLabel: "第7回",
+                unit: "<ruby>毛<rt>け</rt></ruby>も<ruby>羽<rt>はね</rt></ruby>もない<ruby>動物<rt>どうぶつ</rt></ruby>",
+                category: "<ruby>外来種<rt>がいらいしゅ</rt></ruby>の<ruby>問題<rt>もんだい</rt></ruby>",
+                isSeason: false,
+                question: "カミツキガメやウシガエル、オオクチバスなどの「外来種」が問題になっている一番の理由は何でしょう？",
+                choices: [
+                    "日本に古くからすんでいる<ruby>在来種<rt>ざいらいしゅ</rt></ruby>を食べたり、すみかをうばったりして生態系を壊すから",
+                    "日本の冬が寒すぎて1日で全滅してしまうから",
+                    "体が小さすぎて顕微鏡でないと見えないから",
+                    "植物の葉しか食べないので山の木がすべてなくなるから"
+                ],
+                answerIndex: 0,
+                explanation: "外来種が増えすぎると、もともと日本にすんでいた<ruby>在来種<rt>ざいらいしゅ</rt></ruby>が食べられて減ってしまうなどの問題が起きます。"
+            },
+            {
+                id: "sci7_20",
+                round: "ROUND_7",
+                roundLabel: "第7回",
+                unit: "<ruby>毛<rt>け</rt></ruby>も<ruby>羽<rt>はね</rt></ruby>もない<ruby>動物<rt>どうぶつ</rt></ruby>",
+                category: "<ruby>季節<rt>きせつ</rt></ruby>の<ruby>種子<rt>しゅし</rt></ruby>",
+                isSeason: true,
+                question: "カエデの種子（プロペラのような形）が風で遠くまで運ばれるための工夫として正しいものはどれでしょう？",
+                choices: [
+                    "クルクルと回転しながらゆっくり落ちることで、風に乗って遠くまで飛ぶ",
+                    "石のように重たくて、真下に一気に落ちる",
+                    "甘い蜜を出して、アリに運んでもらう",
+                    "水に浮いて海を渡り、別の大陸へ行く"
+                ],
+                answerIndex: 0,
+                explanation: "カエデやマツの種子は翼がついており、回転しながらゆっくり落下することで風に乗って遠くへ運ばれます。"
+            },
+
+            // ==========================================
+            // 第8回：人体の不思議（20問）p.29〜p.32
+            // ==========================================
+            {
+                id: "sci8_1",
+                round: "ROUND_8",
+                roundLabel: "第8回",
+                unit: "<ruby>人体<rt>じんたい</rt></ruby>の<ruby>不思議<rt>ふしぎ</rt></ruby>",
+                category: "<ruby>人類<rt>じんるい</rt></ruby>の<ruby>誕生<rt>たんじょう</rt></ruby>",
+                isSeason: false,
+                question: "<ruby>地球<rt>ちきゅう</rt></ruby>が誕生したのは今からおよそ何年前で、人類の祖先がチンパンジーと枝分かれしたのはおよそ何年前でしょう？",
+                choices: [
+                    "地球誕生：およそ46<ruby>億<rt>おく</rt></ruby>年前 ／ チンパンジーとの枝分かれ：およそ1000<ruby>万<rt>まん</rt></ruby>年前",
+                    "地球誕生：およそ1000<ruby>万<rt>まん</rt></ruby>年前 ／ チンパンジーとの枝分かれ：およそ100<ruby>万<rt>まん</rt></ruby>年前",
+                    "地球誕生：およそ1<ruby>億<rt>おく</rt></ruby>年前 ／ チンパンジーとの枝分かれ：およそ46<ruby>億<rt>おく</rt></ruby>年前",
+                    "地球誕生：およそ1<ruby>万<rt>まん</rt></ruby>年前 ／ チンパンジーとの枝分かれ：およそ2000年前"
+                ],
+                answerIndex: 0,
+                explanation: "地球誕生は約46億年前、その後「<ruby>全地球凍結<rt>ぜんちきゅうとうけつ</rt></ruby>」などを経て、約1000万年前にアフリカの森で類人猿から枝分かれして人類の物語が始まりました。"
+            },
+            {
+                id: "sci8_2",
+                round: "ROUND_8",
+                roundLabel: "第8回",
+                unit: "<ruby>人体<rt>じんたい</rt></ruby>の<ruby>不思議<rt>ふしぎ</rt></ruby>",
+                category: "<ruby>人類<rt>じんるい</rt></ruby>の<ruby>進化<rt>しんか</rt></ruby>",
+                isSeason: false,
+                question: "人類の進化の順番（古い順→現在）として、テキストに載っている正しい並びはどれでしょう？",
+                choices: [
+                    "アルディピテクス → アウストラロピテクス → ホモ・ハビリス → ホモ・エレクトス → ホモ・サピエンス",
+                    "ホモ・サピエンス → ホモ・エレクトス → ホモ・ハビリス → アウストラロピテクス",
+                    "アウストラロピテクス → ホモ・サピエンス → アルディピテクス → ホモ・ハビリス",
+                    "ホモ・ハビリス → アルディピテクス → ホモ・サピエンス → ホモ・エレクトス"
+                ],
+                answerIndex: 0,
+                explanation: "約440万年前のアルディピテクスから進化し、20種類ほどの人類が誕生した中で唯一生き残ったのが私たち「ホモ・サピエンス」です。"
+            },
+            {
+                id: "sci8_3",
+                round: "ROUND_8",
+                roundLabel: "第8回",
+                unit: "<ruby>人体<rt>じんたい</rt></ruby>の<ruby>不思議<rt>ふしぎ</rt></ruby>",
+                category: "<ruby>地球<rt>ちきゅう</rt></ruby>カレンダー",
+                isSeason: false,
+                question: "地球の歴史46億年を1年間（1月1日0時誕生〜12月31日23時59分59秒現在）にたとえた「<ruby>地球<rt>ちきゅう</rt></ruby>カレンダー」では、人類の誕生はいつごろになるでしょう？",
+                choices: [
+                    "12月31日15時39分ごろ（人類の歴史は1日にも満たない短いもの）",
+                    "1月2日の朝ごろ",
+                    "6月15日のお昼ごろ",
+                    "10月31日の夜ごろ"
+                ],
+                answerIndex: 0,
+                explanation: "46億年を1年に直すと、人類が誕生したのは大みそか（12月31日）の午後3時39分ごろになり、人類の歴史はまだ1日にも満たないことがわかります。"
+            },
+            {
+                id: "sci8_4",
+                round: "ROUND_8",
+                roundLabel: "第8回",
+                unit: "<ruby>人体<rt>じんたい</rt></ruby>の<ruby>不思議<rt>ふしぎ</rt></ruby>",
+                category: "<ruby>骨<rt>ほね</rt></ruby>の<ruby>数<rt>かず</rt></ruby>",
+                isSeason: false,
+                question: "ヒトの<ruby>骨<rt>ほね</rt></ruby>の数は、生まれたての赤ちゃんのころと、成人（大人）になったときでどのように変化するでしょう？",
+                choices: [
+                    "生まれたてのころはおよそ300個あり、成長とともに隣り合う骨がくっついて成人ではおよそ200個になる",
+                    "生まれたてのころはおよそ10個しかなく、成人になるとおよそ1000個に増える",
+                    "生まれたときから老人になるまでずっと100個で変わらない",
+                    "成人になると骨はすべてとけて0個になる"
+                ],
+                answerIndex: 0,
+                explanation: "生まれたてのころはおよそ300個ある骨が、成長するにつれてくっつき合い、成人するころにはおよそ200個になります。"
+            },
+            {
+                id: "sci8_5",
+                round: "ROUND_8",
+                roundLabel: "第8回",
+                unit: "<ruby>人体<rt>じんたい</rt></ruby>の<ruby>不思議<rt>ふしぎ</rt></ruby>",
+                category: "<ruby>小<rt>ちい</rt></ruby>さな<ruby>骨<rt>ほね</rt></ruby>と<ruby>大<rt>おお</rt></ruby>きな<ruby>骨<rt>ほね</rt></ruby>",
+                isSeason: false,
+                question: "ヒトの体の中で「一番小さい骨（長さおよそ3mm）」と、「一番大きい骨（長さおよそ40cm）」の組み合わせはどれでしょう？",
+                choices: [
+                    "一番小さい：<ruby>あぶみ骨<rt>あぶみこつ</rt></ruby>（耳の鼓膜の内側） ／ 一番大きい：<ruby>大腿骨<rt>だいたいこつ</rt></ruby>（太ももの骨）",
+                    "一番小さい：<ruby>鎖骨<rt>さこつ</rt></ruby> ／ 一番大きい：<ruby>頭骨<rt>とうこつ</rt></ruby>",
+                    "一番小さい：<ruby>骨盤<rt>こつばん</rt></ruby> ／ 一番大きい：<ruby>つち骨<rt>つちこつ</rt></ruby>",
+                    "一番小さい：<ruby>肋骨<rt>ろっこつ</rt></ruby> ／ 一番大きい：<ruby>きぬた骨<rt>きぬたこつ</rt></ruby>"
+                ],
+                answerIndex: 0,
+                explanation: "耳の鼓膜の内側にある耳小骨（つち骨・きぬた骨・あぶみ骨）のうち「<ruby>あぶみ骨<rt>あぶみこつ</rt></ruby>」が約3mmで最小、太ももの「<ruby>大腿骨<rt>だいたいこつ</rt></ruby>」が約40cmで最大です。また足の骨は左右それぞれ28個もあり二足歩行を支えています。"
+            },
+            {
+                id: "sci8_6",
+                round: "ROUND_8",
+                roundLabel: "第8回",
+                unit: "<ruby>人体<rt>じんたい</rt></ruby>の<ruby>不思議<rt>ふしぎ</rt></ruby>",
+                category: "<ruby>骨<rt>ほね</rt></ruby>のなまえと<ruby>役割<rt>やくわり</rt></ruby>",
+                isSeason: false,
+                question: "脳を守る頭の骨「<ruby>頭骨<rt>とうこつ</rt></ruby>」に対し、心臓や肺をかごのように囲んで守っている胸の骨を何というでしょう？",
+                choices: [
+                    "<ruby>肋骨<rt>ろっこつ</rt></ruby>",
+                    "<ruby>骨盤<rt>こつばん</rt></ruby>",
+                    "<ruby>大腿骨<rt>だいたいこつ</rt></ruby>",
+                    "<ruby>鎖骨<rt>さこつ</rt></ruby>"
+                ],
+                answerIndex: 0,
+                explanation: "心臓や肺を守っている胸の骨は「<ruby>肋骨<rt>ろっこつ</rt></ruby>」です。腰のあたりにある大きな骨は「<ruby>骨盤<rt>こつばん</rt></ruby>」、首の下の肩にある骨は「<ruby>鎖骨<rt>さこつ</rt></ruby>」です。"
+            },
+            {
+                id: "sci8_7",
+                round: "ROUND_8",
+                roundLabel: "第8回",
+                unit: "<ruby>人体<rt>じんたい</rt></ruby>の<ruby>不思議<rt>ふしぎ</rt></ruby>",
+                category: "<ruby>内臓<rt>ないぞう</rt></ruby>のつくり",
+                isSeason: false,
+                question: "胸の中にあり、全身に血液を送り出すポンプの働きをしている内臓と、空気を取り入れて酸素と二酸化炭素を交換する内臓の組み合わせはどれでしょう？",
+                choices: [
+                    "<ruby>心臓<rt>しんぞう</rt></ruby> ／ <ruby>肺<rt>はい</rt></ruby>",
+                    "<ruby>胃<rt>い</rt></ruby> ／ <ruby>小腸<rt>しょうちょう</rt></ruby>",
+                    "<ruby>肝臓<rt>かんぞう</rt></ruby> ／ <ruby>腎臓<rt>じんぞう</rt></ruby>",
+                    "<ruby>食道<rt>しょくどう</rt></ruby> ／ <ruby>大腸<rt>だいちょう</rt></ruby>"
+                ],
+                answerIndex: 0,
+                explanation: "胸の<ruby>肋骨<rt>ろっこつ</rt></ruby>の内側には、血液を送り出す「<ruby>心臓<rt>しんぞう</rt></ruby>」と、呼吸をする左右の「<ruby>肺<rt>はい</rt></ruby>」があります。"
+            },
+            {
+                id: "sci8_8",
+                round: "ROUND_8",
+                roundLabel: "第8回",
+                unit: "<ruby>人体<rt>じんたい</rt></ruby>の<ruby>不思議<rt>ふしぎ</rt></ruby>",
+                category: "<ruby>内臓<rt>ないぞう</rt></ruby>のつくり",
+                isSeason: false,
+                question: "食べ物や飲み物を消化して栄養を吸収する内臓と、おしっこ（尿）をつくる背中側の左右2つあるソラマメ型の内臓の組み合わせはどれでしょう？",
+                choices: [
+                    "<ruby>胃<rt>い</rt></ruby>・<ruby>小腸<rt>しょうちょう</rt></ruby> ／ <ruby>腎臓<rt>じんぞう</rt></ruby>",
+                    "<ruby>心臓<rt>しんぞう</rt></ruby>・<ruby>肺<rt>はい</rt></ruby> ／ <ruby>頭骨<rt>とうこつ</rt></ruby>",
+                    "<ruby>鎖骨<rt>さこつ</rt></ruby>・<ruby>肋骨<rt>ろっこつ</rt></ruby> ／ <ruby>骨盤<rt>こつばん</rt></ruby>",
+                    "<ruby>鼓膜<rt>こまく</rt></ruby>・<ruby>あぶみ骨<rt>あぶみこつ</rt></ruby> ／ <ruby>大腿骨<rt>だいたいこつ</rt></ruby>"
+                ],
+                answerIndex: 0,
+                explanation: "<ruby>胃<rt>い</rt></ruby>や<ruby>小腸<rt>しょうちょう</rt></ruby>は食べ物を消化・吸収し、背中側の腰のあたりにある2つの「<ruby>腎臓<rt>じんぞう</rt></ruby>」は血液をろ過して尿をつくります。また右上腹部にある大きな内臓は「<ruby>肝臓<rt>かんぞう</rt></ruby>」です。"
+            },
+            {
+                id: "sci8_9",
+                round: "ROUND_8",
+                roundLabel: "第8回",
+                unit: "<ruby>人体<rt>じんたい</rt></ruby>の<ruby>不思議<rt>ふしぎ</rt></ruby>",
+                category: "<ruby>人類<rt>じんるい</rt></ruby>の<ruby>歴史<rt>れきし</rt></ruby>",
+                isSeason: false,
+                question: "フランス南西部の「サンセレール遺跡」で、ネアンデルタール人の地層の上にあるホモ・サピエンスの地層から、約100kmも離れた場所の石で作られた石器が見つかりました。このことから考えられることは何でしょう？",
+                choices: [
+                    "ホモ・サピエンスは広い範囲を移動したり、他の集団と交流（交易）したりしていたこと",
+                    "ネアンデルタール人は飛行機に乗って宇宙へ行ったこと",
+                    "当時のフランスでは石が1個も落ちていなかったこと",
+                    "ホモ・サピエンスは石器をまったく使わなかったこと"
+                ],
+                answerIndex: 0,
+                explanation: "100kmも離れた場所の石が使われていたことから、ホモ・サピエンスは行動範囲が広く、離れた地域の人々と交流していたことがわかります。"
+            },
+            {
+                id: "sci8_10",
+                round: "ROUND_8",
+                roundLabel: "第8回",
+                unit: "<ruby>人体<rt>じんたい</rt></ruby>の<ruby>不思議<rt>ふしぎ</rt></ruby>",
+                category: "<ruby>季節<rt>きせつ</rt></ruby>の<ruby>移<rt>うつ</rt></ruby>り<ruby>変<rt>か</rt></ruby>わり",
+                isSeason: true,
+                question: "テキストの「<ruby>季節<rt>きせつ</rt></ruby>の<ruby>移<rt>うつ</rt></ruby>り<ruby>変<rt>か</rt></ruby>わり⑱ <ruby>種子<rt>しゅし</rt></ruby>の<ruby>運<rt>はこ</rt></ruby>ばれ<ruby>方<rt>かた</rt></ruby>②」で紹介されている、「どんぐりが<ruby>転<rt>ころ</rt></ruby>がる<ruby>樹木<rt>じゅもく</rt></ruby>」4つの正しい組み合わせはどれでしょう？",
+                choices: [
+                    "シイ・カシ・クヌギ・コナラ",
+                    "ホウセンカ・カタバミ・ツリフネソウ",
+                    "カエデ・マツ・ススキ・ポプラ",
+                    "オナモミ・センダングサ・タンポポ"
+                ],
+                answerIndex: 0,
+                explanation: "シイ・カシ・クヌギ・コナラは「どんぐりが転がる樹木」で、重力で転がったりリスなどの動物に運ばれたりします。"
+            },
+            {
+                id: "sci8_11",
+                round: "ROUND_8",
+                roundLabel: "第8回",
+                unit: "<ruby>人体<rt>じんたい</rt></ruby>の<ruby>不思議<rt>ふしぎ</rt></ruby>",
+                category: "<ruby>季節<rt>きせつ</rt></ruby>の<ruby>移<rt>うつ</rt></ruby>り<ruby>変<rt>か</rt></ruby>わり",
+                isSeason: true,
+                question: "成熟した実が乾燥すると皮がはじけて、自分の力で遠くまで種を飛ばす「<ruby>実<rt>み</rt></ruby>がはじけて<ruby>飛<rt>と</rt></ruby>ぶ<ruby>種子<rt>しゅし</rt></ruby>」2つはどれでしょう？",
+                choices: [
+                    "ホウセンカ・カタバミ",
+                    "シイ・カシ",
+                    "クヌギ・コナラ",
+                    "オナモミ・センダングサ"
+                ],
+                answerIndex: 0,
+                explanation: "ホウセンカとカタバミは「<ruby>実<rt>み</rt></ruby>がはじけて<ruby>飛<rt>と</rt></ruby>ぶ<ruby>種子<rt>しゅし</rt></ruby>」です。"
+            },
+            {
+                id: "sci8_12",
+                round: "ROUND_8",
+                roundLabel: "第8回",
+                unit: "<ruby>人体<rt>じんたい</rt></ruby>の<ruby>不思議<rt>ふしぎ</rt></ruby>",
+                category: "<ruby>内臓<rt>ないぞう</rt></ruby>の<ruby>位置<rt>いち</rt></ruby>",
+                isSeason: false,
+                question: "おなかの上の右側（肋骨のすぐ下あたり）にある、体の中で最も大きな内臓で、栄養をたくわえたり毒を分解したりする働きがあるものは何でしょう？",
+                choices: [
+                    "<ruby>肝臓<rt>かんぞう</rt></ruby>",
+                    "<ruby>心臓<rt>しんぞう</rt></ruby>",
+                    "<ruby>肺<rt>はい</rt></ruby>",
+                    "<ruby>膀胱<rt>ぼうこう</rt></ruby>"
+                ],
+                answerIndex: 0,
+                explanation: "おなかの右上にある大きな内臓は「<ruby>肝臓<rt>かんぞう</rt></ruby>」です。その左隣に「<ruby>胃<rt>い</rt></ruby>」があります。"
+            },
+            {
+                id: "sci8_13",
+                round: "ROUND_8",
+                roundLabel: "第8回",
+                unit: "<ruby>人体<rt>じんたい</rt></ruby>の<ruby>不思議<rt>ふしぎ</rt></ruby>",
+                category: "<ruby>内臓<rt>ないぞう</rt></ruby>の<ruby>位置<rt>いち</rt></ruby>",
+                isSeason: false,
+                question: "「<ruby>胃<rt>い</rt></ruby>」で消化された食べ物が次に送られ、長さ約6〜7mもの長い管の中で栄養が吸収されるおなかの中央にある内臓は何でしょう？",
+                choices: [
+                    "<ruby>小腸<rt>しょうちょう</rt></ruby>",
+                    "<ruby>肺<rt>はい</rt></ruby>",
+                    "<ruby>心臓<rt>しんぞう</rt></ruby>",
+                    "<ruby>腎臓<rt>じんぞう</rt></ruby>"
+                ],
+                answerIndex: 0,
+                explanation: "胃の次に食べ物が通る長い管は「<ruby>小腸<rt>しょうちょう</rt></ruby>」で、そのまわりを「大腸」が囲んでいます。"
+            },
+            {
+                id: "sci8_14",
+                round: "ROUND_8",
+                roundLabel: "第8回",
+                unit: "<ruby>人体<rt>じんたい</rt></ruby>の<ruby>不思議<rt>ふしぎ</rt></ruby>",
+                category: "<ruby>耳<rt>みみ</rt></ruby>の<ruby>骨<rt>ほね</rt></ruby>",
+                isSeason: false,
+                question: "耳の<ruby>鼓膜<rt>こまく</rt></ruby>の内側で音の振動を伝える3つの小さな骨（耳小骨）の名前として正しいものはどれでしょう？",
+                choices: [
+                    "<ruby>つち骨<rt>つちこつ</rt></ruby>・<ruby>きぬた骨<rt>きぬたこつ</rt></ruby>・<ruby>あぶみ骨<rt>あぶみこつ</rt></ruby>",
+                    "<ruby>鎖骨<rt>さこつ</rt></ruby>・<ruby>肋骨<rt>ろっこつ</rt></ruby>・<ruby>骨盤<rt>こつばん</rt></ruby>",
+                    "<ruby>頭骨<rt>とうこつ</rt></ruby>・<ruby>背骨<rt>せぼね</rt></ruby>・<ruby>大腿骨<rt>だいたいこつ</rt></ruby>",
+                    "<ruby>上腕骨<rt>じょうわんこつ</rt></ruby>・<ruby>肩甲骨<rt>けんこうこつ</rt></ruby>・<ruby>胸骨<rt>きょうこつ</rt></ruby>"
+                ],
+                answerIndex: 0,
+                explanation: "鼓膜の振動は「つち骨・きぬた骨・あぶみ骨」の3つの耳小骨によって奥へ伝えられます。"
+            },
+            {
+                id: "sci8_15",
+                round: "ROUND_8",
+                roundLabel: "第8回",
+                unit: "<ruby>人体<rt>じんたい</rt></ruby>の<ruby>不思議<rt>ふしぎ</rt></ruby>",
+                category: "<ruby>骨<rt>ほね</rt></ruby>の<ruby>性質<rt>せいしつ</rt></ruby>",
+                isSeason: false,
+                question: "ヒトの骨は非常に硬く、何千年も後になって地中から何として見つかることがあるでしょう？",
+                choices: [
+                    "<ruby>化石<rt>かせき</rt></ruby>",
+                    "<ruby>水晶<rt>すいしょう</rt></ruby>",
+                    "<ruby>石炭<rt>せきたん</rt></ruby>",
+                    "<ruby>磁石<rt>じしゃく</rt></ruby>"
+                ],
+                answerIndex: 0,
+                explanation: "骨は非常に硬いため、何千年・何万年も後に地中から「<ruby>化石<rt>かせき</rt></ruby>」として見つかることがあります。"
+            },
+            {
+                id: "sci8_16",
+                round: "ROUND_8",
+                roundLabel: "第8回",
+                unit: "<ruby>人体<rt>じんたい</rt></ruby>の<ruby>不思議<rt>ふしぎ</rt></ruby>",
+                category: "<ruby>地球<rt>ちきゅう</rt></ruby>の<ruby>歴史<rt>れきし</rt></ruby>",
+                isSeason: false,
+                question: "大昔に地球全体が凍りついて生物が大量絶滅へ追いやられた出来事（<ruby>全地球凍結<rt>ぜんちきゅうとうけつ</rt></ruby>）のあと、生き残った<ruby>微生物<rt>びせいぶつ</rt></ruby>はどこで長い時間をかけて進化を繰り返したでしょう？",
+                choices: [
+                    "<ruby>海<rt>うみ</rt></ruby>の中",
+                    "<ruby>雲<rt>くも</rt></ruby>の上",
+                    "<ruby>砂漠<rt>さばく</rt></ruby>の真ん中",
+                    "<ruby>月<rt>つき</rt></ruby>の表面"
+                ],
+                answerIndex: 0,
+                explanation: "全地球凍結のあと、海の中で生き残った微生物が長い時間をかけて進化を繰り返しました。"
+            },
+            {
+                id: "sci8_17",
+                round: "ROUND_8",
+                roundLabel: "第8回",
+                unit: "<ruby>人体<rt>じんたい</rt></ruby>の<ruby>不思議<rt>ふしぎ</rt></ruby>",
+                category: "<ruby>二足歩行<rt>にそくほこう</rt></ruby>の<ruby>秘密<rt>ひみつ</rt></ruby>",
+                isSeason: false,
+                question: "ヒトが2本の足で立って歩く（<ruby>二足歩行<rt>にそくほこう</rt></ruby>）ことができる秘密の1つとして、テキストで紹介されている体の特徴は何でしょう？",
+                choices: [
+                    "体を支える足の骨が左右それぞれ28個もあり、アーチ状などで衝撃や体重を支えていること",
+                    "足の裏に吸盤がついていて地面に吸い付いていること",
+                    "背骨が1本の硬い鉄の棒のようになっていて全く曲がらないこと",
+                    "頭が風船のように軽く空気で満たされていること"
+                ],
+                answerIndex: 0,
+                explanation: "左右それぞれ28個もの多くの骨が組み合わさって体重を支える構造になっていることが、二足歩行の秘密の1つです。"
+            },
+            {
+                id: "sci8_18",
+                round: "ROUND_8",
+                roundLabel: "第8回",
+                unit: "<ruby>人体<rt>じんたい</rt></ruby>の<ruby>不思議<rt>ふしぎ</rt></ruby>",
+                category: "<ruby>背骨<rt>せぼね</rt></ruby>のつくり",
+                isSeason: false,
+                question: "体の後ろ側の中央を縦に通る「<ruby>背骨<rt>せぼね</rt></ruby>（脊椎）」は、どのようなつくりになっているでしょう？",
+                choices: [
+                    "小さなブロックのような骨（椎骨）がたくさん連なっていて、体を曲げたり支えたりできる",
+                    "1本のまっすぐな棒で、まったく曲げることができない",
+                    "ゴムのように骨が1本も入っていない",
+                    "左右の腕と直接1本の骨でつながっている"
+                ],
+                answerIndex: 0,
+                explanation: "背骨は小さな骨がたくさん積み重なって連なっているため、体を柔軟に動かしながら上半身を支えることができます。"
+            },
+            {
+                id: "sci8_19",
+                round: "ROUND_8",
+                roundLabel: "第8回",
+                unit: "<ruby>人体<rt>じんたい</rt></ruby>の<ruby>不思議<rt>ふしぎ</rt></ruby>",
+                category: "<ruby>人類<rt>じんるい</rt></ruby>の<ruby>誕生年代<rt>たんじょうねんだい</rt></ruby>",
+                isSeason: false,
+                question: "私たち現在の人類である「ホモ・サピエンス」が誕生したのは、推定およそ何万年前とされているでしょう？",
+                choices: [
+                    "およそ5.5<ruby>万<rt>まん</rt></ruby>年前（テキストの推定表による）",
+                    "およそ440<ruby>万<rt>まん</rt></ruby>年前",
+                    "およそ180<ruby>万<rt>まん</rt></ruby>年前",
+                    "およそ46<ruby>億<rt>おく</rt></ruby>年前"
+                ],
+                answerIndex: 0,
+                explanation: "テキストの表では、アルディピテクス440万年前、アウストラロピテクス370万年前、ホモ・ハビリス240万年前、ホモ・エレクトス180万年前、ホモ・サピエンス5.5万年前と紹介されています。"
+            },
+            {
+                id: "sci8_20",
+                round: "ROUND_8",
+                roundLabel: "第8回",
+                unit: "<ruby>人体<rt>じんたい</rt></ruby>の<ruby>不思議<rt>ふしぎ</rt></ruby>",
+                category: "<ruby>体調<rt>たいちょう</rt></ruby>と<ruby>内臓<rt>ないぞう</rt></ruby>",
+                isSeason: false,
+                question: "「おなかが痛い！」と人がお腹をおさえているとき、お腹の内部にある内臓として当てはまらないものはどれでしょう？",
+                choices: [
+                    "<ruby>肺<rt>はい</rt></ruby>（胸の肋骨の中にある）",
+                    "<ruby>胃<rt>い</rt></ruby>",
+                    "<ruby>小腸<rt>しょうちょう</rt></ruby>",
+                    "<ruby>大腸<rt>だいちょう</rt></ruby>"
+                ],
+                answerIndex: 0,
+                explanation: "肺や心臓は横隔膜より上の「胸（肋骨の内側）」にあり、胃・小腸・大腸・肝臓などは「おなか（腹部）」にあります。"
+            },
+
+            // ==========================================
+            // 第9回：鏡で光を集めよう（20問）p.33〜p.36
+            // ==========================================
+            {
+                id: "sci9_1",
+                round: "ROUND_9",
+                roundLabel: "第9回",
+                unit: "<ruby>鏡<rt>かがみ</rt></ruby>で<ruby>光<rt>ひかり</rt></ruby>を<ruby>集<rt>あつ</rt></ruby>めよう",
+                category: "<ruby>光<rt>ひかり</rt></ruby>の<ruby>性質<rt>せいしつ</rt></ruby>",
+                isSeason: false,
+                question: "何枚かの鏡で太陽の光をはね返して1か所に集めると、光が重なったところはどうなるでしょう？",
+                choices: [
+                    "重なるほど<ruby>明<rt>あか</rt></ruby>るくなり、温度も上がって<ruby>あたたかく<rt>あたたかく</rt></ruby>なる",
+                    "重なるほど暗くなり、温度も下がって冷たくなる",
+                    "明るさは変わるが、温度はまったく変わらない",
+                    "光が消えて真っ黒になる"
+                ],
+                answerIndex: 0,
+                explanation: "太陽の光には目に見える「可視光線」と目に見えない「赤外線」などがふくまれており、光を重ねるほど明るくあたたかくなります。"
+            },
+            {
+                id: "sci9_2",
+                round: "ROUND_9",
+                roundLabel: "第9回",
+                unit: "<ruby>鏡<rt>かがみ</rt></ruby>で<ruby>光<rt>ひかり</rt></ruby>を<ruby>集<rt>あつ</rt></ruby>めよう",
+                category: "<ruby>見<rt>み</rt></ruby>えない<ruby>光<rt>ひかり</rt></ruby>",
+                isSeason: false,
+                question: "太陽の光にふくまれる目に見えない光のうち、「あたたかさの原因になる光」と「日焼けや殺菌、光電池（太陽電池）などに利用される光」の組み合わせはどれでしょう？",
+                choices: [
+                    "あたたかさの原因：<ruby>赤外線<rt>せきがいせん</rt></ruby> ／ 日焼け・殺菌：<ruby>紫外線<rt>しがいせん</rt></ruby>",
+                    "あたたかさの原因：<ruby>紫外線<rt>しがいせん</rt></ruby> ／ 日焼け・殺菌：<ruby>赤外線<rt>せきがいせん</rt></ruby>",
+                    "あたたかさの原因：<ruby>可視光線<rt>かしこうせん</rt></ruby> ／ 日焼け・殺菌：<ruby>X線<rt>エックスせん</rt></ruby>",
+                    "どちらも太陽の光にはふくまれていない"
+                ],
+                answerIndex: 0,
+                explanation: "赤色の外側にある「<ruby>赤外線<rt>せきがいせん</rt></ruby>」はあたたかさの原因になり、紫色の外側にある「<ruby>紫外線<rt>しがいせん</rt></ruby>」は日焼けの原因になる一方、殺菌や光電池にも利用されます。"
+            },
+            {
+                id: "sci9_3",
+                round: "ROUND_9",
+                roundLabel: "第9回",
+                unit: "<ruby>鏡<rt>かがみ</rt></ruby>で<ruby>光<rt>ひかり</rt></ruby>を<ruby>集<rt>あつ</rt></ruby>めよう",
+                category: "<ruby>太陽<rt>たいよう</rt></ruby>の<ruby>光<rt>ひかり</rt></ruby>とプリズム",
+                isSeason: false,
+                question: "白く見える太陽の光を「プリズム」というガラスや水晶に当てると、虹のように7色に分かれます。このことからわかることは何でしょう？",
+                choices: [
+                    "<ruby>太陽<rt>たいよう</rt></ruby>の光には、いろいろな色の光が<ruby>混<rt>ま</rt></ruby>ざっていること",
+                    "プリズムの中に最初から絵の具がぬってあること",
+                    "太陽の光は赤い光1種類だけでできていること",
+                    "ガラスを通すと光がすべて消えてしまうこと"
+                ],
+                answerIndex: 0,
+                explanation: "太陽の光には赤・橙・黄・緑・青・藍・紫のいろいろな色の光（可視光線）が混ざっています。"
+            },
+            {
+                id: "sci9_4",
+                round: "ROUND_9",
+                roundLabel: "第9回",
+                unit: "<ruby>鏡<rt>かがみ</rt></ruby>で<ruby>光<rt>ひかり</rt></ruby>を<ruby>集<rt>あつ</rt></ruby>めよう",
+                category: "<ruby>光<rt>ひかり</rt></ruby>の<ruby>三原色<rt>さんげんしょく</rt></ruby>",
+                isSeason: false,
+                question: "液晶テレビなどでも使われている「<ruby>光<rt>ひかり</rt></ruby>の<ruby>三原色<rt>さんげんしょく</rt></ruby>」の3つの色と、その3色をすべて混ぜたときにできる色の組み合わせはどれでしょう？",
+                choices: [
+                    "ブルー・グリーン・レッド ／ 混ぜると「<ruby>白<rt>しろ</rt></ruby>」になる",
+                    "シアン・マゼンタ・イエロー ／ 混ぜると「<ruby>黒<rt>くろ</rt></ruby>」になる",
+                    "赤・青・黄 ／ 混ぜると「<ruby>茶色<rt>ちゃいろ</rt></ruby>」になる",
+                    "白・黒・グレー ／ 混ぜると「<ruby>虹色<rt>にじいろ</rt></ruby>」になる"
+                ],
+                answerIndex: 0,
+                explanation: "「<ruby>光<rt>ひかり</rt></ruby>の<ruby>三原色<rt>さんげんしょく</rt></ruby>」はブルー（青）・グリーン（緑）・レッド（赤）で、3色を混ぜるとだんだん白に近づきます。"
+            },
+            {
+                id: "sci9_5",
+                round: "ROUND_9",
+                roundLabel: "第9回",
+                unit: "<ruby>鏡<rt>かがみ</rt></ruby>で<ruby>光<rt>ひかり</rt></ruby>を<ruby>集<rt>あつ</rt></ruby>めよう",
+                category: "<ruby>色<rt>いろ</rt></ruby>の<ruby>三原色<rt>さんげんしょく</rt></ruby>",
+                isSeason: false,
+                question: "絵具やプリンターのインクなどで使われる「<ruby>色<rt>いろ</rt></ruby>の<ruby>三原色<rt>さんげんしょく</rt></ruby>」の3つの色と、その3色をすべて混ぜたときにできる色の組み合わせはどれでしょう？",
+                choices: [
+                    "シアン・マゼンタ・イエロー ／ 混ぜると「<ruby>黒<rt>くろ</rt></ruby>」になる",
+                    "ブルー・グリーン・レッド ／ 混ぜると「<ruby>白<rt>しろ</rt></ruby>」になる",
+                    "ピンク・オレンジ・むらさき ／ 混ぜると「<ruby>透明<rt>とうめい</rt></ruby>」になる",
+                    "白・銀・金 ／ 混ぜると「<ruby>灰色<rt>はいいろ</rt></ruby>」になる"
+                ],
+                answerIndex: 0,
+                explanation: "「<ruby>色<rt>いろ</rt></ruby>の<ruby>三原色<rt>さんげんしょく</rt></ruby>」はシアン・マゼンタ・イエローで、3色を混ぜるとだんだん黒に近づきます。"
+            },
+            {
+                id: "sci9_6",
+                round: "ROUND_9",
+                roundLabel: "第9回",
+                unit: "<ruby>鏡<rt>かがみ</rt></ruby>で<ruby>光<rt>ひかり</rt></ruby>を<ruby>集<rt>あつ</rt></ruby>めよう",
+                category: "<ruby>曲面鏡<rt>きょくめんきょう</rt></ruby>の<ruby>利用<rt>りよう</rt></ruby>",
+                isSeason: false,
+                question: "中華鍋のように内側へカーブした「<ruby>曲面鏡<rt>きょくめんきょう</rt></ruby>（凹面鏡）」を使って太陽の光を1点に集め、料理をしたりお湯をわかしたりする道具を何というでしょう？",
+                choices: [
+                    "ソーラークッカー",
+                    "オシロスコープ",
+                    "カーブミラー",
+                    "プリズム"
+                ],
+                answerIndex: 0,
+                explanation: "曲面鏡で光を1点に集める仕組みは「ソーラークッカー」や、ギリシャのオリンピア遺跡で行われるオリンピックの「<ruby>聖火<rt>せいか</rt></ruby>の<ruby>採火<rt>さいか</rt></ruby>」にも使われています。"
+            },
+            {
+                id: "sci9_7",
+                round: "ROUND_9",
+                roundLabel: "第9回",
+                unit: "<ruby>鏡<rt>かがみ</rt></ruby>で<ruby>光<rt>ひかり</rt></ruby>を<ruby>集<rt>あつ</rt></ruby>めよう",
+                category: "アルキメデスの<ruby>光線兵器<rt>こうせんへいき</rt></ruby>",
+                isSeason: false,
+                question: "今から2200年以上前、海岸から遠く離れた敵の船にたくさんの太陽の光を集めて火を起こし撃退する方法を考えたといわれる古代ギリシャの人物はだれでしょう？",
+                choices: [
+                    "アルキメデス",
+                    "マイケル・ファラデー",
+                    "アウグスト・クント",
+                    "チャールズ・ダーウィン"
+                ],
+                answerIndex: 0,
+                explanation: "「アルキメデスの光線兵器」として伝えられていますが、船に合わせて光を集めるのは難しく、再現実験では船が燃えるには長い時間がかかってしまうようです。"
+            },
+            {
+                id: "sci9_8",
+                round: "ROUND_9",
+                roundLabel: "第9回",
+                unit: "<ruby>鏡<rt>かがみ</rt></ruby>で<ruby>光<rt>ひかり</rt></ruby>を<ruby>集<rt>あつ</rt></ruby>めよう",
+                category: "<ruby>光電池<rt>こうでんち</rt></ruby>（<ruby>太陽電池<rt>たいようでんち</rt></ruby>）",
+                isSeason: false,
+                question: "光のエネルギーを電気のエネルギーに変える「<ruby>光電池<rt>こうでんち</rt></ruby>（ソーラーパネル）」について、大きな光電池を使うときの弱点（良くない点）として考えられるものはどれでしょう？",
+                choices: [
+                    "広い設置場所が必要になり、夜や雨・曇りの日は発電量が減ったり発電できなくなったりする",
+                    "太陽の光が当たると爆発してしまう",
+                    "電気をつくると同時に大量の二酸化炭素と黒いけむりを出す",
+                    "1度使うと1秒でこわれて二度と使えなくなる"
+                ],
+                answerIndex: 0,
+                explanation: "光電池は大きいほど多くの光を受け取って発電量が増えますが、広い場所が必要になることや、天気・時間帯に発電量が左右される課題があります。"
+            },
+            {
+                id: "sci9_9",
+                round: "ROUND_9",
+                roundLabel: "第9回",
+                unit: "<ruby>鏡<rt>かがみ</rt></ruby>で<ruby>光<rt>ひかり</rt></ruby>を<ruby>集<rt>あつ</rt></ruby>めよう",
+                category: "<ruby>凸面鏡<rt>とつめんきょう</rt></ruby>（カーブミラー）",
+                isSeason: false,
+                question: "道路の曲がり角などに設置されている「カーブミラー」のように、外側へふくらんだ「<ruby>凸面鏡<rt>とつめんきょう</rt></ruby>」の大きな特徴は何でしょう？",
+                choices: [
+                    "うつるものは小さく見えるが、<ruby>広<rt>ひろ</rt></ruby>い<ruby>範囲<rt>はんい</rt></ruby>を<ruby>見渡<rt>みわた</rt></ruby>すのに適している",
+                    "うつるものが100倍に大きく拡大されて見える",
+                    "太陽の光を1点に集めて紙を燃やすのに適している",
+                    "自分の顔が上下さかさまにうつる"
+                ],
+                answerIndex: 0,
+                explanation: "凸面鏡（カーブミラー）は広い範囲を見渡すのに適しているため、見通しの悪い道路などで安全確認に使われています。"
+            },
+            {
+                id: "sci9_10",
+                round: "ROUND_9",
+                roundLabel: "第9回",
+                unit: "<ruby>鏡<rt>かがみ</rt></ruby>で<ruby>光<rt>ひかり</rt></ruby>を<ruby>集<rt>あつ</rt></ruby>めよう",
+                category: "<ruby>季節<rt>きせつ</rt></ruby>の<ruby>移<rt>うつ</rt></ruby>り<ruby>変<rt>か</rt></ruby>わり",
+                isSeason: true,
+                question: "テキストの「<ruby>季節<rt>きせつ</rt></ruby>の<ruby>移<rt>うつ</rt></ruby>り<ruby>変<rt>か</rt></ruby>わり⑲ <ruby>地下<rt>ちか</rt></ruby>に<ruby>養分<rt>ようぶん</rt></ruby>を<ruby>蓄<rt>たくわ</rt></ruby>える」で紹介されている、「<ruby>根<rt>ね</rt></ruby>に養分を蓄える植物」4つはどれでしょう？",
+                choices: [
+                    "ダリア・サツマイモ・ニンジン・ヤマノイモ",
+                    "ハス（れんこん）・サトイモ・ジャガイモ",
+                    "タマネギ・ユリ・チューリップ・スイセン",
+                    "キャベツ・レタス・ハクサイ・ホウレンソウ"
+                ],
+                answerIndex: 0,
+                explanation: "ダリア・サツマイモ・ニンジン・ヤマノイモは「<ruby>根<rt>ね</rt></ruby>」に養分を蓄える植物です。"
+            },
+            {
+                id: "sci9_11",
+                round: "ROUND_9",
+                roundLabel: "第9回",
+                unit: "<ruby>鏡<rt>かがみ</rt></ruby>で<ruby>光<rt>ひかり</rt></ruby>を<ruby>集<rt>あつ</rt></ruby>めよう",
+                category: "<ruby>季節<rt>きせつ</rt></ruby>の<ruby>移<rt>うつ</rt></ruby>り<ruby>変<rt>か</rt></ruby>わり",
+                isSeason: true,
+                question: "テキストの「<ruby>季節<rt>きせつ</rt></ruby>の<ruby>移<rt>うつ</rt></ruby>り<ruby>変<rt>か</rt></ruby>わり⑲ <ruby>地下<rt>ちか</rt></ruby>に<ruby>養分<rt>ようぶん</rt></ruby>を<ruby>蓄<rt>たくわ</rt></ruby>える」で紹介されている、「<ruby>地下の茎<rt>ちかのくき</rt></ruby>に養分を蓄える植物」2つはどれでしょう？",
+                choices: [
+                    "ハス（れんこん）・サトイモ",
+                    "サツマイモ・ニンジン",
+                    "ダリア・ヤマノイモ",
+                    "ダイコン・ゴボウ"
+                ],
+                answerIndex: 0,
+                explanation: "ハス（れんこん）とサトイモ（およびジャガイモ）は「<ruby>地下の茎<rt>ちかのくき</rt></ruby>」に養分を蓄える植物です。"
+            },
+            {
+                id: "sci9_12",
+                round: "ROUND_9",
+                roundLabel: "第9回",
+                unit: "<ruby>鏡<rt>かがみ</rt></ruby>で<ruby>光<rt>ひかり</rt></ruby>を<ruby>集<rt>あつ</rt></ruby>めよう",
+                category: "<ruby>光<rt>ひかり</rt></ruby>の<ruby>三原色<rt>さんげんしょく</rt></ruby>",
+                isSeason: false,
+                question: "光の三原色のうち、「ブルー（青）」と「グリーン（緑）」の光を重ねると、どの色ができるでしょう？",
+                choices: [
+                    "シアン（水色）",
+                    "マゼンタ（赤紫）",
+                    "イエロー（黄色）",
+                    "黒"
+                ],
+                answerIndex: 0,
+                explanation: "ブルー＋グリーン＝シアン、ブルー＋レッド＝マゼンタ、グリーン＋レッド＝イエローになり、3色すべて重なると「白」になります。"
+            },
+            {
+                id: "sci9_13",
+                round: "ROUND_9",
+                roundLabel: "第9回",
+                unit: "<ruby>鏡<rt>かがみ</rt></ruby>で<ruby>光<rt>ひかり</rt></ruby>を<ruby>集<rt>あつ</rt></ruby>めよう",
+                category: "<ruby>光<rt>ひかり</rt></ruby>の<ruby>三原色<rt>さんげんしょく</rt></ruby>",
+                isSeason: false,
+                question: "光の三原色のうち、「グリーン（緑）」と「レッド（赤）」の光を重ねると、どの色ができるでしょう？",
+                choices: [
+                    "イエロー（黄色）",
+                    "シアン（水色）",
+                    "マゼンタ（赤紫）",
+                    "黒"
+                ],
+                answerIndex: 0,
+                explanation: "グリーン（緑）とレッド（赤）の光を重ねると「イエロー（黄色）」になります。"
+            },
+            {
+                id: "sci9_14",
+                round: "ROUND_9",
+                roundLabel: "第9回",
+                unit: "<ruby>鏡<rt>かがみ</rt></ruby>で<ruby>光<rt>ひかり</rt></ruby>を<ruby>集<rt>あつ</rt></ruby>めよう",
+                category: "<ruby>色<rt>いろ</rt></ruby>の<ruby>三原色<rt>さんげんしょく</rt></ruby>",
+                isSeason: false,
+                question: "色の三原色のうち、「マゼンタ」と「イエロー」の絵具を混ぜると、どの色ができるでしょう？",
+                choices: [
+                    "レッド（赤）",
+                    "グリーン（緑）",
+                    "ブルー（青）",
+                    "白"
+                ],
+                answerIndex: 0,
+                explanation: "マゼンタ＋イエロー＝レッド、イエロー＋シアン＝グリーン、シアン＋マゼンタ＝ブルーになり、3色すべて混ぜると「黒」になります。"
+            },
+            {
+                id: "sci9_15",
+                round: "ROUND_9",
+                roundLabel: "第9回",
+                unit: "<ruby>鏡<rt>かがみ</rt></ruby>で<ruby>光<rt>ひかり</rt></ruby>を<ruby>集<rt>あつ</rt></ruby>めよう",
+                category: "<ruby>実験<rt>じっけん</rt></ruby>の<ruby>安全<rt>あんぜん</rt></ruby>",
+                isSeason: false,
+                question: "鏡を使って太陽の光をはね返す実験をするとき、絶対にやってはいけない危険な行動は何でしょう？",
+                choices: [
+                    "集めた光や太陽を直接目で見たり、人の顔に向けて光を当てたりすること",
+                    "壁に光を当てて明るさの変化を観察すること",
+                    "温度計に光を当てて温度の変化を調べること",
+                    "2枚・3枚と鏡の枚数を変えて比べること"
+                ],
+                answerIndex: 0,
+                explanation: "集めた強い光を人に向けて当てたり、太陽や反射光を直接見たりすると目を傷める大変危険な事故につながるため絶対にやめましょう。"
+            },
+            {
+                id: "sci9_16",
+                round: "ROUND_9",
+                roundLabel: "第9回",
+                unit: "<ruby>鏡<rt>かがみ</rt></ruby>で<ruby>光<rt>ひかり</rt></ruby>を<ruby>集<rt>あつ</rt></ruby>めよう",
+                category: "<ruby>可視光線<rt>かしこうせん</rt></ruby>",
+                isSeason: false,
+                question: "人の目で見ることができる光のことを何というでしょう？",
+                choices: [
+                    "<ruby>可視光線<rt>かしこうせん</rt></ruby>",
+                    "<ruby>赤外線<rt>せきがいせん</rt></ruby>",
+                    "<ruby>紫外線<rt>しがいせん</rt></ruby>",
+                    "<ruby>超音波<rt>ちょうおんぱ</rt></ruby>"
+                ],
+                answerIndex: 0,
+                explanation: "人の目で見ることができる光を「<ruby>可視光線<rt>かしこうせん</rt></ruby>」といい、赤外線や紫外線は人の目では見ることができません。"
+            },
+            {
+                id: "sci9_17",
+                round: "ROUND_9",
+                roundLabel: "第9回",
+                unit: "<ruby>鏡<rt>かがみ</rt></ruby>で<ruby>光<rt>ひかり</rt></ruby>を<ruby>集<rt>あつ</rt></ruby>めよう",
+                category: "<ruby>紫外線<rt>しがいせん</rt></ruby>の<ruby>影響<rt>えいきょう</rt></ruby>",
+                isSeason: false,
+                question: "太陽の光にふくまれる「<ruby>紫外線<rt>しがいせん</rt></ruby>」が私たちや身の回りのものに与える影響として正しいものはどれでしょう？",
+                choices: [
+                    "日焼けやしわ・そばかすの原因になったり、物が色あせたりする一方、殺菌にも利用される",
+                    "浴びるほど肌が真っ白になり、物がまったく色あせなくなる",
+                    "温度を0℃以下まで急激に冷やす働きがある",
+                    "音を高くしたり低くしたりする働きがある"
+                ],
+                answerIndex: 0,
+                explanation: "紫外線は日焼けや物の色あせの原因になりますが、食器乾燥機の殺菌など私たちの助けにもなっています。"
+            },
+            {
+                id: "sci9_18",
+                round: "ROUND_9",
+                roundLabel: "第9回",
+                unit: "<ruby>鏡<rt>かがみ</rt></ruby>で<ruby>光<rt>ひかり</rt></ruby>を<ruby>集<rt>あつ</rt></ruby>めよう",
+                category: "<ruby>鏡<rt>かがみ</rt></ruby>のはね<ruby>返<rt>かえ</rt></ruby>し",
+                isSeason: false,
+                question: "鏡に太陽の光を当ててはね返すとき、鏡を傾けると、はね返った光の向きはどうなるでしょう？",
+                choices: [
+                    "鏡の傾きを変えると、はね返る光の向きも変わる",
+                    "鏡をどれだけ動かしても、光はいつも真上に進む",
+                    "鏡を動かすと光が消えてしまう",
+                    "光は鏡を通り抜けて後ろ側へ進む"
+                ],
+                answerIndex: 0,
+                explanation: "鏡は光を規則正しく反射するため、鏡の角度を変えることで狙った場所へ光を集めることができます。"
+            },
+            {
+                id: "sci9_19",
+                round: "ROUND_9",
+                roundLabel: "第9回",
+                unit: "<ruby>鏡<rt>かがみ</rt></ruby>で<ruby>光<rt>ひかり</rt></ruby>を<ruby>集<rt>あつ</rt></ruby>めよう",
+                category: "<ruby>太陽熱発電<rt>たいようねつはつでん</rt></ruby>",
+                isSeason: false,
+                question: "砂漠などの広い土地にたくさんの鏡を並べ、1つの塔のてっぺんに太陽の光を集めてお湯をわかし蒸気でタービンを回す仕組みは、何を利用して電気をつくっているでしょう？",
+                choices: [
+                    "鏡で集めた太陽の「<ruby>熱<rt>ねつ</rt></ruby>」エネルギー",
+                    "風の力で鏡を回転させる「<ruby>風力<rt>ふうりょく</rt></ruby>」",
+                    "川の流れる力を使う「<ruby>水力<rt>すいりょく</rt></ruby>」",
+                    "石炭を燃やす「<ruby>火力<rt>かりょく</rt></ruby>」"
+                ],
+                answerIndex: 0,
+                explanation: "たくさんの鏡で光を1か所に集めると非常に高い温度になるため、その熱を使って発電（太陽熱発電）を行うこともできます。"
+            },
+            {
+                id: "sci9_20",
+                round: "ROUND_9",
+                roundLabel: "第9回",
+                unit: "<ruby>鏡<rt>かがみ</rt></ruby>で<ruby>光<rt>ひかり</rt></ruby>を<ruby>集<rt>あつ</rt></ruby>めよう",
+                category: "<ruby>光<rt>ひかり</rt></ruby>の<ruby>直進<rt>ちょくしん</rt></ruby>",
+                isSeason: false,
+                question: "空気中や水の中を光が進むとき、光はどのような道すじを通って進むでしょう？",
+                choices: [
+                    "まっすぐ進む（<ruby>直進<rt>ちょくしん</rt></ruby>する）",
+                    "ヘビのようにクネクネと曲がりながら進む",
+                    "らせん状にぐるぐる回りながら進む",
+                    "10cm進むごとに必ず直角に曲がる"
+                ],
+                answerIndex: 0,
+                explanation: "光は同じ物質の中を「まっすぐ進む（直進する）」性質があります。"
+            },
+
+            // ==========================================
+            // 第10回：音の高さを変えてみよう（20問）p.37〜p.40
+            // ==========================================
+            {
+                id: "sci10_1",
+                round: "ROUND_10",
+                roundLabel: "第10回",
+                unit: "<ruby>音<rt>おと</rt></ruby>の<ruby>高<rt>たか</rt></ruby>さを<ruby>変<rt>か</rt></ruby>えてみよう",
+                category: "<ruby>音<rt>おと</rt></ruby>の正体",
+                isSeason: false,
+                question: "スピーカーの上のデンプンが踊ったり、たたいた音さを水に入れると水面が小刻みにゆれたりすることからわかる、音を出しているもの（音源）の共通点は何でしょう？",
+                choices: [
+                    "すべて細かく<ruby>振動<rt>しんどう</rt></ruby>している（ふるえている）",
+                    "すべて100℃以上に熱くなっている",
+                    "すべて電気を帯びて光っている",
+                    "すべて重さが軽くなっている"
+                ],
+                answerIndex: 0,
+                explanation: "音を出しているもの（音源）はすべて細かく「<ruby>振動<rt>しんどう</rt></ruby>」しており、振動を止めると音も止まります。"
+            },
+            {
+                id: "sci10_2",
+                round: "ROUND_10",
+                roundLabel: "第10回",
+                unit: "<ruby>音<rt>おと</rt></ruby>の<ruby>高<rt>たか</rt></ruby>さを<ruby>変<rt>か</rt></ruby>えてみよう",
+                category: "<ruby>音<rt>おと</rt></ruby>の<ruby>伝<rt>つた</rt></ruby>わり<ruby>方<rt>かた</rt></ruby>",
+                isSeason: false,
+                question: "物の振動が空気や水などを伝わっていく様子を何といい、空気などがまったく存在しない「真空」の中では音はどうなるでしょう？",
+                choices: [
+                    "<ruby>波<rt>なみ</rt></ruby>といい、空気などの伝えるものがない真空の中では音は伝わらない",
+                    "<ruby>光<rt>ひかり</rt></ruby>といい、真空の中では100倍大きく聞こえる",
+                    "<ruby>風<rt>かぜ</rt></ruby>といい、真空の中でも地球と同じように聞こえる",
+                    "<ruby>電気<rt>でんき</rt></ruby>といい、真空の中では高い音だけが伝わる"
+                ],
+                answerIndex: 0,
+                explanation: "振動が伝わる様子を「<ruby>波<rt>なみ</rt></ruby>」といい、空気や水・糸などの波を伝えるものがない場所（宇宙空間などの真空）では音は伝わりません。"
+            },
+            {
+                id: "sci10_3",
+                round: "ROUND_10",
+                roundLabel: "第10回",
+                unit: "<ruby>音<rt>おと</rt></ruby>の<ruby>高<rt>たか</rt></ruby>さを<ruby>変<rt>か</rt></ruby>えてみよう",
+                category: "クントの<ruby>実験<rt>じっけん</rt></ruby>",
+                isSeason: false,
+                question: "発泡ビーズを入れた透明な筒にスピーカーから音を出すと、ビーズが規則正しく集まって音の波の様子が観察できる実験装置を考えたドイツの物理学者はだれでしょう？",
+                choices: [
+                    "アウグスト・クント（クントの実験）",
+                    "マイケル・ファラデー",
+                    "ヴィルヘルム・レントゲン",
+                    "アルキメデス"
+                ],
+                answerIndex: 0,
+                explanation: "ドイツの物理学者「アウグスト・クント」が考えた装置で、空気の振動（音の波）の様子を目で見ることができます。"
+            },
+            {
+                id: "sci10_4",
+                round: "ROUND_10",
+                roundLabel: "第10回",
+                unit: "<ruby>音<rt>おと</rt></ruby>の<ruby>高<rt>たか</rt></ruby>さを<ruby>変<rt>か</rt></ruby>えてみよう",
+                category: "<ruby>音<rt>おと</rt></ruby>の<ruby>高<rt>たか</rt></ruby>さと<ruby>振動数<rt>しんどうすう</rt></ruby>",
+                isSeason: false,
+                question: "「高い音」と「低い音」では、音源や空気の「<ruby>振動<rt>しんどう</rt></ruby>のしかた」にどのようなちがいがあるでしょう？",
+                choices: [
+                    "<ruby>高<rt>たか</rt></ruby>い音ほど1秒間に素早くたくさん振動し（振動数が多い）、<ruby>低<rt>ひく</rt></ruby>い音ほどゆっくり振動する",
+                    "<ruby>低<rt>ひく</rt></ruby>い音ほど1秒間にたくさん振動し、高い音ほどゆっくり振動する",
+                    "高い音も低い音も1秒間に振動する回数はまったく同じである",
+                    "高い音は縦に振動し、低い音はまったく振動しない"
+                ],
+                answerIndex: 0,
+                explanation: "音を高くするには、音を出すものが素早く振動する必要があり、1秒間の振動数（Hz：ヘルツ）が多いほど高い音になります。"
+            },
+            {
+                id: "sci10_5",
+                round: "ROUND_10",
+                roundLabel: "第10回",
+                unit: "<ruby>音<rt>おと</rt></ruby>の<ruby>高<rt>たか</rt></ruby>さを<ruby>変<rt>か</rt></ruby>えてみよう",
+                category: "<ruby>可聴域<rt>かちょういき</rt></ruby>",
+                isSeason: false,
+                question: "人の耳で聞こえる音は、1秒間に何回〜何回程度の振動といわれているでしょう？",
+                choices: [
+                    "1秒間に約20回〜20000回程度（16000回以上は若い人にしか聞こえないことが多い）",
+                    "1秒間に1回〜5回程度",
+                    "1秒間に100万回〜1000万回程度",
+                    "1秒間に0回〜10回程度"
+                ],
+                answerIndex: 0,
+                explanation: "人の耳で聞こえるのは1秒間に約20回〜20000回程度の振動で、20000回をこえる音は「超音波」とよばれます。"
+            },
+            {
+                id: "sci10_6",
+                round: "ROUND_10",
+                roundLabel: "第10回",
+                unit: "<ruby>音<rt>おと</rt></ruby>の<ruby>高<rt>たか</rt></ruby>さを<ruby>変<rt>か</rt></ruby>えてみよう",
+                category: "オシロスコープ",
+                isSeason: false,
+                question: "マイクで拾った音を電気信号に変え、画面に「波の形」で表示して音の高さや大きさを観察する装置を何というでしょう？",
+                choices: [
+                    "オシロスコープ",
+                    "プリズム",
+                    "ソーラークッカー",
+                    "アネモメーター"
+                ],
+                answerIndex: 0,
+                explanation: "「オシロスコープ」を使うと音の波を詳しく確認でき、高い音ほど波の山と山の間隔が狭く（細かく）なります。スマホやタブレットのアプリでも観察できます。"
+            },
+            {
+                id: "sci10_7",
+                round: "ROUND_10",
+                roundLabel: "第10回",
+                unit: "<ruby>音<rt>おと</rt></ruby>の<ruby>高<rt>たか</rt></ruby>さを<ruby>変<rt>か</rt></ruby>えてみよう",
+                category: "<ruby>縦波<rt>たてなみ</rt></ruby>と<ruby>横波<rt>よこなみ</rt></ruby>",
+                isSeason: false,
+                question: "ひもを上下にゆらしたときにできる波を「横波」というのに対し、空気の濃い部分（密）と薄い部分（疎）が押し合って進む「音の波」は何とよばれるでしょう？",
+                choices: [
+                    "<ruby>縦波<rt>たてなみ</rt></ruby>",
+                    "<ruby>津波<rt>つなみ</rt></ruby>",
+                    "<ruby>電磁波<rt>でんじは</rt></ruby>",
+                    "<ruby>高波<rt>たかなみ</rt></ruby>"
+                ],
+                answerIndex: 0,
+                explanation: "音の波は進行方向と同じ向きに空気が振動する「<ruby>縦波<rt>たてなみ</rt></ruby>」とよばれる波です（おもちゃのバネを前後に押すと観察できます）。"
+            },
+            {
+                id: "sci10_8",
+                round: "ROUND_10",
+                roundLabel: "第10回",
+                unit: "<ruby>音<rt>おと</rt></ruby>の<ruby>高<rt>たか</rt></ruby>さを<ruby>変<rt>か</rt></ruby>えてみよう",
+                category: "<ruby>楽器<rt>がっき</rt></ruby>と<ruby>音<rt>おと</rt></ruby>の<ruby>高<rt>たか</rt></ruby>さ",
+                isSeason: false,
+                question: "マリンバやチャイム・太鼓などの打楽器や、琴・ギターなどの弦楽器、トランペット・リコーダーなどの管楽器で、「<ruby>高<rt>たか</rt></ruby>い音」を出すための共通の法則はどれでしょう？",
+                choices: [
+                    "音源（板・弦・空気の通り道）が「<ruby>短<rt>みじか</rt></ruby>く」「<ruby>細<rt>ほそ</rt></ruby>い（小さい）」ほど素早く振動して高い音になる",
+                    "音源が「<ruby>長<rt>なが</rt></ruby>く」「<ruby>太<rt>ふと</rt></ruby>い（大きい）」ほど高い音になる",
+                    "楽器の色が赤色だと高い音になり、青色だと低い音になる",
+                    "どんな長さや大きさでもすべて同じ高さの音が出る"
+                ],
+                answerIndex: 0,
+                explanation: "音源が短く、細く、小さいほど素早く振動しやすくなり、高い音が出ます（逆に大きい太鼓や長い弦・長い管は低い音が出ます）。"
+            },
+            {
+                id: "sci10_9",
+                round: "ROUND_10",
+                roundLabel: "第10回",
+                unit: "<ruby>音<rt>おと</rt></ruby>の<ruby>高<rt>たか</rt></ruby>さを<ruby>変<rt>か</rt></ruby>えてみよう",
+                category: "<ruby>季節<rt>きせつ</rt></ruby>の<ruby>移<rt>うつ</rt></ruby>り<ruby>変<rt>か</rt></ruby>わり",
+                isSeason: true,
+                question: "テキストの「<ruby>季節<rt>きせつ</rt></ruby>の<ruby>移<rt>うつ</rt></ruby>り<ruby>変<rt>か</rt></ruby>わり⑳ <ruby>冬<rt>ふゆ</rt></ruby>の<ruby>天気<rt>てんき</rt></ruby>」で紹介されている、冬の気象の観察ポイント2つは何でしょう？",
+                choices: [
+                    "<ruby>雪<rt>ゆき</rt></ruby>の<ruby>結晶<rt>けっしょう</rt></ruby>（六角形などの形）・<ruby>雲<rt>くも</rt></ruby>の<ruby>様子<rt>ようす</rt></ruby>（冬の衛星写真）",
+                    "台風（反時計回りのうず）・入道雲",
+                    "カエデの紅葉・イチョウの黄葉",
+                    "ハクチョウの飛来・ツバメの子育て"
+                ],
+                answerIndex: 0,
+                explanation: "冬の天気では、六角形を基本としたさまざまな「<ruby>雪<rt>ゆき</rt></ruby>の<ruby>結晶<rt>けっしょう</rt></ruby>」や、日本海側にすじ状の雲が並ぶ「<ruby>冬<rt>ふゆ</rt></ruby>の<ruby>衛星写真<rt>えいせいしゃしん</rt></ruby>」が特徴的です。"
+            },
+            {
+                id: "sci10_10",
+                round: "ROUND_10",
+                roundLabel: "第10回",
+                unit: "<ruby>音<rt>おと</rt></ruby>の<ruby>高<rt>たか</rt></ruby>さを<ruby>変<rt>か</rt></ruby>えてみよう",
+                category: "<ruby>楽器<rt>がっき</rt></ruby>のしくみ",
+                isSeason: false,
+                question: "リコーダーやトランペットなどの管楽器は、何の長さを変えることで音の高さを変えているでしょう？",
+                choices: [
+                    "<ruby>空気<rt>くうき</rt></ruby>が通りぬける長さ（リコーダーは指で穴をふさぎ、トランペットはバルブを押して管の長さを変える）",
+                    "楽器についている弦の張り具合",
+                    "楽器の外側にぬられたペンキの厚さ",
+                    "演奏する人の身長の高さ"
+                ],
+                answerIndex: 0,
+                explanation: "管楽器は管の中の空気が振動して音が出るため、空気が通りぬける長さを変えることで音の高さを変えています。"
+            },
+            {
+                id: "sci10_11",
+                round: "ROUND_10",
+                roundLabel: "第10回",
+                unit: "<ruby>音<rt>おと</rt></ruby>の<ruby>高<rt>たか</rt></ruby>さを<ruby>変<rt>か</rt></ruby>えてみよう",
+                category: "<ruby>大<rt>おお</rt></ruby>きな<ruby>音<rt>おと</rt></ruby>と<ruby>小<rt>ちい</rt></ruby>さな<ruby>音<rt>おと</rt></ruby>",
+                isSeason: false,
+                question: "同じ弦や太鼓を強くはじいたり強くたたいたりして「大きな音」を出すとき、振動のしかたはどう変わるでしょう？",
+                choices: [
+                    "振動の<ruby>振<rt>ふ</rt></ruby>れ<ruby>幅<rt>はば</rt></ruby>（<ruby>振幅<rt>しんぷく</rt></ruby>）が大きくなる（オシロスコープの波が上下に大きくなる）",
+                    "1秒間に振動する回数が10倍に増える",
+                    "振動の触れ幅が小さくなって止まりそうになる",
+                    "振動のしかたは小さな音のときとまったく同じである"
+                ],
+                answerIndex: 0,
+                explanation: "音の「大きさ」は振動の触れ幅（振幅）の大きさで決まり、触れ幅が大きいほど大きな音になります。"
+            },
+            {
+                id: "sci10_12",
+                round: "ROUND_10",
+                roundLabel: "第10回",
+                unit: "<ruby>音<rt>おと</rt></ruby>の<ruby>高<rt>たか</rt></ruby>さを<ruby>変<rt>か</rt></ruby>えてみよう",
+                category: "<ruby>弦楽器<rt>げんがっき</rt></ruby>の<ruby>音<rt>おと</rt></ruby>の<ruby>高<rt>たか</rt></ruby>さ",
+                isSeason: false,
+                question: "ギターや琴などの弦楽器で、弦の長さや太さ以外に「音を高くする」方法として正しいものはどれでしょう？",
+                choices: [
+                    "弦を強くピンと<ruby>張<rt>は</rt></ruby>る",
+                    "弦をゆるめてダルダルにする",
+                    "弦に水をつけてぬらす",
+                    "弦をゆっくりなでる"
+                ],
+                answerIndex: 0,
+                explanation: "弦を「短くする」「細くする」「強く張る」と、素早く振動するようになって音が高くなります。"
+            },
+            {
+                id: "sci10_13",
+                round: "ROUND_10",
+                roundLabel: "第10回",
+                unit: "<ruby>音<rt>おと</rt></ruby>の<ruby>高<rt>たか</rt></ruby>さを<ruby>変<rt>か</rt></ruby>えてみよう",
+                category: "<ruby>太鼓<rt>たいこ</rt></ruby>の<ruby>大<rt>おお</rt></ruby>きさと<ruby>音<rt>おと</rt></ruby>",
+                isSeason: false,
+                question: "「大きい太鼓」と「小さい太鼓」をたたいたときの音の高さと、波のグラフの対応として正しいものはどれでしょう？",
+                choices: [
+                    "大きい太鼓：低い音（波がゆったり） ／ 小さい太鼓：高い音（波が細かい）",
+                    "大きい太鼓：高い音（波が細かい） ／ 小さい太鼓：低い音（波がゆったり）",
+                    "どちらも同じ高さの音で波の形も同じ",
+                    "大きい太鼓からは光が出て、小さい太鼓からは音が出る"
+                ],
+                answerIndex: 0,
+                explanation: "大きい太鼓はゆっくり振動するため「低い音（波がゆったり）」になり、小さい太鼓は素早く振動するため「高い音（波が細かい）」になります。"
+            },
+            {
+                id: "sci10_14",
+                round: "ROUND_10",
+                roundLabel: "第10回",
+                unit: "<ruby>音<rt>おと</rt></ruby>の<ruby>高<rt>たか</rt></ruby>さを<ruby>変<rt>か</rt></ruby>えてみよう",
+                category: "<ruby>音<rt>おと</rt></ruby>と<ruby>炎<rt>ほのお</rt></ruby>",
+                isSeason: false,
+                question: "大きな太鼓の前に火のついたろうそくを並べて太鼓をたたくと、ろうそくの炎が音に合わせてゆれます。これはなぜでしょう？",
+                choices: [
+                    "太鼓の皮の振動が<ruby>空気<rt>くうき</rt></ruby>を伝わって炎をゆらしたから",
+                    "太鼓の皮から強い風が吹いてきたから",
+                    "太鼓の音にびっくりして炎が逃げようとしたから",
+                    "ろうそくの芯が磁石になって太鼓に引かれたから"
+                ],
+                answerIndex: 0,
+                explanation: "太鼓の振動が空気の波（音の波）となって伝わり、ろうそくの炎をゆらします。"
+            },
+            {
+                id: "sci10_15",
+                round: "ROUND_10",
+                roundLabel: "第10回",
+                unit: "<ruby>音<rt>おと</rt></ruby>の<ruby>高<rt>たか</rt></ruby>さを<ruby>変<rt>か</rt></ruby>えてみよう",
+                category: "<ruby>科学史<rt>かがくし</rt></ruby>",
+                isSeason: false,
+                question: "アウグスト・クントが教授を務めていた大学の弟子で、1901年に第1回ノーベル物理学賞を受賞した人物はだれでしょう？",
+                choices: [
+                    "ヴィルヘルム・レントゲン（X線の発見）",
+                    "マイケル・ファラデー",
+                    "アイザック・ニュートン",
+                    "ガリレオ・ガリレイ"
+                ],
+                answerIndex: 0,
+                explanation: "クントはヴィルヘルム・レントゲン（1901年に第1回ノーベル物理学賞を受賞）を指導したことでも知られています。"
+            },
+            {
+                id: "sci10_16",
+                round: "ROUND_10",
+                roundLabel: "第10回",
+                unit: "<ruby>音<rt>おと</rt></ruby>の<ruby>高<rt>たか</rt></ruby>さを<ruby>変<rt>か</rt></ruby>えてみよう",
+                category: "ピアノのつくり",
+                isSeason: false,
+                question: "本物のグランドピアノのボディ（外枠）が左側だけ長く、右側が短くカーブした非対称の形をしているのはなぜでしょう？",
+                choices: [
+                    "左側の低い音を出す弦は長く、右側の高い音を出す弦は短く張られているから",
+                    "左側の低い音を出す弦が短く、右側の高い音を出す弦が長いから",
+                    "左側に演奏する人のベッドがついているから",
+                    "見た目をかっこよくするためだけの飾りで中身は空っぽだから"
+                ],
+                answerIndex: 0,
+                explanation: "ピアノの鍵盤は左側が低い音（長い弦）、右側が高い音（短い弦）になっているため、本物のグランドピアノは左側の奥行きが長くなっています。"
+            },
+            {
+                id: "sci10_17",
+                round: "ROUND_10",
+                roundLabel: "第10回",
+                unit: "<ruby>音<rt>おと</rt></ruby>の<ruby>高<rt>たか</rt></ruby>さを<ruby>変<rt>か</rt></ruby>えてみよう",
+                category: "<ruby>モノコード<rt>モノコード</rt></ruby>の<ruby>実験<rt>じっけん</rt></ruby>",
+                isSeason: false,
+                question: "1本の弦を張った実験道具（モノコード）で、弦をおさえる位置を変えて振動する部分を「半分」の長さにすると、音はどうなるでしょう？",
+                choices: [
+                    "1オクターブ<ruby>高<rt>たか</rt></ruby>い音になる（振動数が2倍になる）",
+                    "1オクターブ<ruby>低<rt>ひく</rt></ruby>い音になる",
+                    "音の高さはまったく変わらない",
+                    "音がまったく出なくなる"
+                ],
+                answerIndex: 0,
+                explanation: "振動する弦の長さを半分にすると、1秒間に振動する回数が2倍になり、1オクターブ高い音が出ます。"
+            },
+            {
+                id: "sci10_18",
+                round: "ROUND_10",
+                roundLabel: "第10回",
+                unit: "<ruby>音<rt>おと</rt></ruby>の<ruby>高<rt>たか</rt></ruby>さを<ruby>変<rt>か</rt></ruby>えてみよう",
+                category: "<ruby>音<rt>おと</rt></ruby>の<ruby>速<rt>はや</rt></ruby>さ",
+                isSeason: false,
+                question: "花火が光ってから少し遅れて「ドン！」と音が聞こえたり、稲光が見えてから少し遅れて雷の音が聞こえたりするのはなぜでしょう？",
+                choices: [
+                    "<ruby>光<rt>ひかり</rt></ruby>の進む速さよりも、<ruby>音<rt>おと</rt></ruby>が空気中を進む速さの方がずっと遅いから",
+                    "花火や雷は、光ってから3秒後に音を出す仕組みになっているから",
+                    "目よりも耳の方が遠い場所についているから",
+                    "音は地面の下を遠回りして伝わってくるから"
+                ],
+                answerIndex: 0,
+                explanation: "光は1秒間に約30万km進みますが、音は空気中を1秒間に約340mしか進まないため、遠くで起きた出来事は光が先に届き、音が遅れて聞こえます。"
+            },
+            {
+                id: "sci10_19",
+                round: "ROUND_10",
+                roundLabel: "第10回",
+                unit: "<ruby>音<rt>おと</rt></ruby>の<ruby>高<rt>たか</rt></ruby>さを<ruby>変<rt>か</rt></ruby>えてみよう",
+                category: "<ruby>季節<rt>きせつ</rt></ruby>の<ruby>天気<rt>てんき</rt></ruby>",
+                isSeason: true,
+                question: "冬の人工衛星の雲写真を見ると、冷たい北西の季節風が暖かい日本海の上を通ることで、日本海側にどのような形の雲がたくさん発生しているでしょう？",
+                choices: [
+                    "<ruby>すじ状<rt>すじじょう</rt></ruby>の<ruby>雲<rt>くも</rt></ruby>",
+                    "ドーナツ型の1つの巨大な雲",
+                    "ハート型のピンク色の雲",
+                    "雲が1つもない完全な快晴"
+                ],
+                answerIndex: 0,
+                explanation: "冬になると大陸からの冷たい風が日本海から水蒸気をもらい、日本海側にたくさんの「すじ状の雲」ができて大雪を降らせます。"
+            },
+            {
+                id: "sci10_20",
+                round: "ROUND_10",
+                roundLabel: "第10回",
+                unit: "<ruby>音<rt>おと</rt></ruby>の<ruby>高<rt>たか</rt></ruby>さを<ruby>変<rt>か</rt></ruby>えてみよう",
+                category: "<ruby>試験管<rt>しけんかん</rt></ruby>と<ruby>音<rt>おと</rt></ruby>",
+                isSeason: false,
+                question: "水の入った試験管の口に息を吹きかけて音を出すとき、「水がたくさん入っている試験管」と「水が少ししか入っていない試験管」では、どちらが高い音になるでしょう？",
+                choices: [
+                    "水が<ruby>たくさん<rt>たくさん</rt></ruby>入っている試験管（振動する空気の柱が短いから）",
+                    "水が<ruby>少<rt>すこ</rt></ruby>ししか入っていない試験管（振動する空気の柱が長いから）",
+                    "どちらもまったく同じ高さの音になる",
+                    "息を吹きかけても試験管からは音が出ない"
+                ],
+                answerIndex: 0,
+                explanation: "息を吹きかけるときは試験管の中の「空気の柱」が振動するため、水が多くて空気の部分が短い試験管ほど高い音になります（逆にたたいて鳴らすときはガラスと水が振動するため、水が多いほど低い音になります）。"
+            }
+        ];
+
+        // ==========================================
+        // アプリの状態管理（localStorage連携）
+        // ==========================================
+        const STORAGE_KEY_WRONG = 'science_quiz_6_10_wrong';
+        const STORAGE_KEY_STATS = 'science_quiz_6_10_stats';
+
+        let state = {
+            selectedFilter: "ALL",
+            isReviewMode: false,
+            currentQuestion: null,
+            currentChoices: [],
+            lastQuestionId: null,
+            answeredCount: 0,
+            correctCount: 0,
+            combo: 0,
+            wrongQuestionIds: new Set(),
+            isAnswered: false
+        };
+
+        // localStorageから読み込み
+        function loadSavedState() {
+            try {
+                const rawWrong = localStorage.getItem(STORAGE_KEY_WRONG);
+                if (rawWrong) {
+                    const parsedWrong = JSON.parse(rawWrong);
+                    if (Array.isArray(parsedWrong)) {
+                        const validIds = new Set(quizDatabase.map(q => q.id));
+                        state.wrongQuestionIds = new Set(parsedWrong.filter(id => validIds.has(id)));
+                    }
+                }
+                const rawStats = localStorage.getItem(STORAGE_KEY_STATS);
+                if (rawStats) {
+                    const parsedStats = JSON.parse(rawStats);
+                    if (typeof parsedStats.answeredCount === 'number') state.answeredCount = parsedStats.answeredCount;
+                    if (typeof parsedStats.correctCount === 'number') state.correctCount = parsedStats.correctCount;
+                    if (typeof parsedStats.combo === 'number') state.combo = parsedStats.combo;
+                }
+            } catch (e) {
+                console.warn('保存データの読み込みに失敗しました', e);
+            }
+        }
+
+        // localStorageへ保存
+        function saveState() {
+            try {
+                localStorage.setItem(STORAGE_KEY_WRONG, JSON.stringify(Array.from(state.wrongQuestionIds)));
+                localStorage.setItem(STORAGE_KEY_STATS, JSON.stringify({
+                    answeredCount: state.answeredCount,
+                    correctCount: state.correctCount,
+                    combo: state.combo
+                }));
+            } catch (e) {
+                console.warn('データの保存に失敗しました', e);
+            }
+        }
+
+        // DOM要素の参照
+        const els = {
+            filterSelect: document.getElementById('filter-select'),
+            reviewModeBtn: document.getElementById('review-mode-btn'),
+            reviewBtnText: document.getElementById('review-btn-text'),
+            modeBanner: document.getElementById('mode-banner'),
+            reviewRemaining: document.getElementById('review-remaining'),
+            qRoundBadge: document.getElementById('q-round-badge'),
+            qUnitBadge: document.getElementById('q-unit-badge'),
+            qCategoryBadge: document.getElementById('q-category-badge'),
+            qStreakBadge: document.getElementById('q-streak-badge'),
+            questionText: document.getElementById('question-text'),
+            choicesContainer: document.getElementById('choices-container'),
+            feedbackArea: document.getElementById('feedback-area'),
+            resultIcon: document.getElementById('result-icon'),
+            resultTitle: document.getElementById('result-title'),
+            correctAnswerSub: document.getElementById('correct-answer-sub'),
+            explanationText: document.getElementById('explanation-text'),
+            comboCount: document.getElementById('combo-count'),
+            accuracyRate: document.getElementById('accuracy-rate'),
+            totalAnswered: document.getElementById('total-answered'),
+            resetModal: document.getElementById('reset-modal')
+        };
+
+        // 配列をシャッフルする関数（Fisher-Yates）
+        function shuffleArray(array) {
+            const arr = [...array];
+            for (let i = arr.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [arr[i], arr[j]] = [arr[j], arr[i]];
+            }
+            return arr;
+        }
+
+        // 初期化処理
+        function init() {
+            loadSavedState();
+
+            const allOption = els.filterSelect.querySelector('option[value="ALL"]');
+            if (allOption) {
+                allOption.textContent = `🌟 すべてランダム（全${quizDatabase.length}問）`;
+            }
+
+            els.filterSelect.addEventListener('change', (e) => {
+                state.selectedFilter = e.target.value;
+                if (state.isReviewMode) {
+                    exitReviewMode(false);
+                }
+                nextQuestion();
+            });
+
+            // キーボードショートカット対応
+            document.addEventListener('keydown', (e) => {
+                if (!els.resetModal.classList.contains('hidden')) return;
+
+                if (!state.isAnswered) {
+                    if (['1', '2', '3', '4'].includes(e.key)) {
+                        const idx = parseInt(e.key, 10) - 1;
+                        const buttons = els.choicesContainer.querySelectorAll('button');
+                        if (buttons[idx]) {
+                            buttons[idx].click();
+                        }
+                    }
+                } else {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault();
+                        nextQuestion();
+                    }
+                }
+            });
+
+            updateStatsUI();
+            updateReviewUI();
+            nextQuestion();
+        }
+
+        // 現在のフィルターに応じた出題プールを取得
+        function getQuestionPool() {
+            if (state.isReviewMode) {
+                return quizDatabase.filter(q => state.wrongQuestionIds.has(q.id));
+            }
+            if (state.selectedFilter === "ALL") {
+                return quizDatabase;
+            }
+            if (state.selectedFilter === "SEASON") {
+                return quizDatabase.filter(q => q.isSeason);
+            }
+            return quizDatabase.filter(q => q.round === state.selectedFilter);
+        }
+
+        // 次の問題を出題
+        function nextQuestion() {
+            state.isAnswered = false;
+            els.feedbackArea.classList.add('hidden');
+            els.correctAnswerSub.classList.add('hidden');
+
+            let pool = getQuestionPool();
+
+            // 復習モードで全問クリアした場合
+            if (state.isReviewMode && pool.length === 0) {
+                exitReviewMode(true);
+                return;
+            }
+
+            // 直前と同じ問題が連続しないようにフィルタ
+            if (pool.length > 1 && state.lastQuestionId) {
+                pool = pool.filter(q => q.id !== state.lastQuestionId);
+            }
+
+            // ランダムに1問選択
+            const randomIndex = Math.floor(Math.random() * pool.length);
+            const question = pool[randomIndex];
+            state.currentQuestion = question;
+            state.lastQuestionId = question.id;
+
+            // メタバッジ・問題文を反映
+            els.qRoundBadge.textContent = question.roundLabel;
+            els.qUnitBadge.innerHTML = question.unit;
+            els.qCategoryBadge.innerHTML = question.category;
+            els.questionText.innerHTML = question.question;
+
+            if (state.combo >= 3) {
+                els.qStreakBadge.innerHTML = `🔥 ${state.combo}<ruby>連続<rt>れんぞく</rt></ruby>せいかい！`;
+                els.qStreakBadge.classList.remove('hidden');
+            } else {
+                els.qStreakBadge.classList.add('hidden');
+            }
+
+            // 選択肢をシャッフルして描画（縦幅を抑えたスリムデザイン）
+            const choiceObjs = question.choices.map((htmlStr, idx) => ({
+                html: htmlStr,
+                isCorrect: idx === question.answerIndex
+            }));
+            state.currentChoices = shuffleArray(choiceObjs);
+
+            els.choicesContainer.innerHTML = '';
+            const labels = ['ア', 'イ', 'ウ', 'エ'];
+
+            state.currentChoices.forEach((choiceObj, idx) => {
+                const btn = document.createElement('button');
+                btn.className = "choice-btn w-full text-left bg-slate-50 hover:bg-blue-50 border-2 border-slate-200 hover:border-blue-400 rounded-xl px-2.5 py-2 sm:p-3.5 font-bold text-slate-800 text-[13px] sm:text-base flex items-center gap-2 sm:gap-3 shadow-2xs cursor-pointer";
+                btn.innerHTML = `
+                    <span class="w-6 h-6 sm:w-7 sm:h-7 rounded-full bg-white border border-slate-300 text-blue-600 font-extrabold text-xs sm:text-sm flex items-center justify-center shrink-0">
+                        ${labels[idx]}
+                    </span>
+                    <span class="ruby-choice">${choiceObj.html}</span>
+                `;
+                btn.onclick = () => handleAnswer(idx, btn);
+                els.choicesContainer.appendChild(btn);
+            });
+
+            updateReviewUI();
+
+            // 次の問題に切り替わったら上部へスムーズスクロール
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        // 回答選択時の処理
+        function handleAnswer(selectedIdx, clickedBtn) {
+            if (state.isAnswered) return;
+            state.isAnswered = true;
+
+            const q = state.currentQuestion;
+            const selectedChoiceObj = state.currentChoices[selectedIdx];
+            const isCorrect = selectedChoiceObj.isCorrect;
+            state.answeredCount++;
+
+            const buttons = els.choicesContainer.querySelectorAll('button');
+            buttons.forEach((btn, idx) => {
+                btn.disabled = true;
+                btn.classList.remove('hover:bg-blue-50', 'hover:border-blue-400', 'cursor-pointer');
+                const isThisCorrect = state.currentChoices[idx].isCorrect;
+
+                if (isThisCorrect) {
+                    btn.classList.remove('bg-slate-50', 'border-slate-200');
+                    btn.classList.add('bg-emerald-50', 'border-emerald-500', 'text-emerald-900', 'ring-2', 'ring-emerald-200');
+                    btn.querySelector('span:first-child').classList.add('bg-emerald-500', 'text-white', 'border-emerald-500');
+                } else if (btn === clickedBtn && !isCorrect) {
+                    btn.classList.remove('bg-slate-50', 'border-slate-200');
+                    btn.classList.add('bg-rose-50', 'border-rose-400', 'text-rose-900');
+                    btn.querySelector('span:first-child').classList.add('bg-rose-500', 'text-white', 'border-rose-500');
+                } else {
+                    btn.classList.add('opacity-50');
+                }
+            });
+
+            if (isCorrect) {
+                state.correctCount++;
+                state.combo++;
+                if (state.wrongQuestionIds.has(q.id)) {
+                    state.wrongQuestionIds.delete(q.id);
+                }
+
+                els.resultIcon.textContent = "⭕";
+                els.resultTitle.innerHTML = getPraiseMessage(state.combo);
+                els.resultTitle.className = "text-base sm:text-xl font-extrabold text-emerald-600 ruby-ui";
+
+                if (state.combo > 0 && state.combo % 5 === 0) {
+                    fireConfetti();
+                }
+            } else {
+                state.combo = 0;
+                state.wrongQuestionIds.add(q.id);
+
+                const correctHtml = q.choices[q.answerIndex];
+                els.resultIcon.textContent = "❌";
+                els.resultTitle.textContent = "ざんねん… もうひと息！";
+                els.resultTitle.className = "text-base sm:text-xl font-extrabold text-rose-600";
+                els.correctAnswerSub.innerHTML = `<ruby>正解<rt>せいかい</rt></ruby>は「<span class="text-emerald-700 underline decoration-emerald-400 decoration-2">${correctHtml}</span>」だよ`;
+                els.correctAnswerSub.classList.remove('hidden');
+            }
+
+            els.explanationText.innerHTML = q.explanation;
+            els.feedbackArea.classList.remove('hidden');
+
+            saveState();
+            updateStatsUI();
+            updateReviewUI();
+
+            setTimeout(() => {
+                els.feedbackArea.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+            }, 80);
+        }
+
+        // 連続正解数に応じたほめ言葉
+        function getPraiseMessage(combo) {
+            if (combo >= 10) return `神レベル！${combo}<ruby>連続<rt>れんぞく</rt></ruby>せいかい！！`;
+            if (combo >= 5) return `すごい！${combo}<ruby>連続<rt>れんぞく</rt></ruby>せいかい<ruby>達成<rt>たっせい</rt></ruby>！`;
+            if (combo >= 3) return `<ruby>絶好調<rt>ぜっこうちょう</rt></ruby>！${combo}<ruby>連続<rt>れんぞく</rt></ruby>せいかい！`;
+            return "せいかい！その<ruby>調子<rt>ちょうし</rt></ruby>！";
+        }
+
+        // 紙吹雪エフェクト
+        function fireConfetti() {
+            if (typeof confetti === 'function') {
+                confetti({
+                    particleCount: 65,
+                    spread: 55,
+                    origin: { y: 0.7 }
+                });
+            }
+        }
+
+        // ステータスバーの更新
+        function updateStatsUI() {
+            els.comboCount.textContent = state.combo;
+            els.totalAnswered.textContent = state.answeredCount;
+
+            if (state.answeredCount === 0) {
+                els.accuracyRate.textContent = "--%";
+            } else {
+                const rate = Math.round((state.correctCount / state.answeredCount) * 100);
+                els.accuracyRate.textContent = `${rate}%`;
+            }
+        }
+
+        // 復習ボタン・バナーの表示更新
+        function updateReviewUI() {
+            const count = state.wrongQuestionIds.size;
+            els.reviewBtnText.innerHTML = `<ruby>復習<rt>ふくしゅう</rt></ruby>(${count}問)`;
+            els.reviewModeBtn.disabled = (count === 0 && !state.isReviewMode);
+
+            if (state.isReviewMode) {
+                els.modeBanner.classList.remove('hidden');
+                els.reviewRemaining.textContent = `のこり ${count} 問`;
+                els.reviewModeBtn.classList.add('bg-rose-500', 'text-white', 'border-rose-500');
+                els.reviewModeBtn.classList.remove('bg-white', 'text-rose-600');
+            } else {
+                els.modeBanner.classList.add('hidden');
+                els.reviewModeBtn.classList.remove('bg-rose-500', 'text-white', 'border-rose-500');
+                els.reviewModeBtn.classList.add('bg-white', 'text-rose-600');
+            }
+        }
+
+        // 復習モードの切り替え
+        function toggleReviewMode() {
+            if (state.isReviewMode) {
+                exitReviewMode(true);
+            } else {
+                if (state.wrongQuestionIds.size === 0) return;
+                state.isReviewMode = true;
+                updateReviewUI();
+                nextQuestion();
+            }
+        }
+
+        // 復習モード終了
+        function exitReviewMode(shouldLoadNext = true) {
+            state.isReviewMode = false;
+            updateReviewUI();
+            if (shouldLoadNext) {
+                nextQuestion();
+            }
+        }
+
+        // リセットモーダル制御
+        function resetStats() {
+            els.resetModal.classList.remove('hidden');
+        }
+        function closeResetModal() {
+            els.resetModal.classList.add('hidden');
+        }
+        function confirmReset() {
+            state.answeredCount = 0;
+            state.correctCount = 0;
+            state.combo = 0;
+            state.wrongQuestionIds.clear();
+            state.isReviewMode = false;
+            saveState();
+            closeResetModal();
+            updateStatsUI();
+            updateReviewUI();
+            nextQuestion();
+        }
+
+        // 起動
+        window.addEventListener('DOMContentLoaded', init);
+    </script>
+</body>
+</html>

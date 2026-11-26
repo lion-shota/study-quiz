@@ -1,0 +1,2312 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>理科 第1回〜第5回 クイズ（全100問）</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts: M PLUS Rounded 1c & Inter -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=M+PLUS+Rounded+1c:wght@400;500;700;800&display=swap" rel="stylesheet">
+    <!-- Canvas Confetti for celebrations -->
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+    <style>
+        body {
+            font-family: 'M PLUS Rounded 1c', 'Inter', sans-serif;
+            background-color: #f0f7ff;
+            background-image: radial-gradient(#dbeafe 1.5px, transparent 1.5px);
+            background-size: 20px 20px;
+            user-select: none;
+            -webkit-tap-highlight-color: transparent;
+        }
+        /* ルビが重ならず、かつ縦幅を取りすぎないコンパクト行間設定 */
+        ruby {
+            ruby-align: center;
+        }
+        rt {
+            font-size: 0.55em;
+            font-weight: 700;
+            color: #475569;
+            line-height: 1.0;
+        }
+        .ruby-question {
+            line-height: 1.85 !important;
+        }
+        .ruby-choice {
+            line-height: 1.75 !important;
+        }
+        .ruby-explanation {
+            line-height: 1.85 !important;
+        }
+        .ruby-ui {
+            line-height: 1.6 !important;
+        }
+        .quiz-card {
+            box-shadow: 0 6px 18px -4px rgba(59, 130, 246, 0.14), 0 4px 8px -4px rgba(59, 130, 246, 0.08);
+        }
+        .choice-btn {
+            transition: all 0.12s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .choice-btn:active:not(:disabled) {
+            transform: scale(0.985);
+        }
+        @keyframes popIn {
+            0% { transform: scale(0.92); opacity: 0; }
+            70% { transform: scale(1.02); opacity: 1; }
+            100% { transform: scale(1); opacity: 1; }
+        }
+        .animate-pop {
+            animation: popIn 0.22s ease-out forwards;
+        }
+    </style>
+</head>
+<body class="min-h-screen text-slate-800 flex flex-col justify-between pb-3">
+
+    <!-- 超コンパクト・ヘッダー＆操作バー（LINE内ブラウザ対応） -->
+    <header class="bg-white/95 backdrop-blur-md border-b border-blue-100 sticky top-0 z-30 shadow-2xs">
+        <div class="max-w-3xl mx-auto px-2 sm:px-4 py-1.5 sm:py-2.5">
+            <!-- 1段目：タイトル＋成績バッジを横並び1行に凝縮 -->
+            <div class="flex items-center justify-between gap-1.5">
+                <div class="flex items-center gap-1.5 min-w-0">
+                    <span class="text-lg sm:text-2xl shrink-0">🔬</span>
+                    <h1 class="text-xs sm:text-lg font-extrabold text-blue-700 tracking-tight truncate ruby-ui">
+                        <span class="inline-block bg-blue-600 text-white text-[10px] sm:text-xs px-1.5 py-0.5 rounded-md mr-1 align-middle"><ruby>理科<rt>りか</rt></ruby> 第1回〜第5回</span>クイズ
+                    </h1>
+                </div>
+                
+                <!-- 成績バッジ（コンパクト） -->
+                <div class="flex items-center gap-1 text-[11px] sm:text-xs font-extrabold shrink-0">
+                    <div class="bg-amber-50 border border-amber-200 text-amber-700 px-1.5 sm:px-2.5 py-0.5 rounded-full flex items-center gap-0.5" title="連続正解数">
+                        <span>🔥</span><span id="combo-count">0</span>
+                    </div>
+                    <div class="bg-emerald-50 border border-emerald-200 text-emerald-700 px-1.5 sm:px-2.5 py-0.5 rounded-full flex items-center gap-0.5" title="正答率">
+                        <span>🎯</span><span id="accuracy-rate">--%</span>
+                    </div>
+                    <div class="bg-blue-50 border border-blue-200 text-blue-700 px-1.5 sm:px-2.5 py-0.5 rounded-full flex items-center gap-0.5" title="解いた問題数">
+                        <span>📝</span><span id="total-answered">0</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 2段目：出題範囲プルダウン＋復習ボタンを横並び1行に配置 -->
+            <div class="mt-1.5 pt-1.5 border-t border-slate-100 flex items-center justify-between gap-1.5">
+                <select id="filter-select" aria-label="出題範囲" class="bg-slate-50 border border-slate-200 text-slate-700 text-[11px] sm:text-sm font-bold rounded-lg px-2 py-1 focus:outline-none focus:ring-2 focus:ring-blue-400 flex-1 min-w-0 cursor-pointer">
+                    <option value="ALL">🌟 すべてランダム（全100問）</option>
+                    <optgroup label="📚 単元（回）ごとにチャレンジ">
+                        <option value="ROUND_1">💧 第1回 地面に見える水（20問）</option>
+                        <option value="ROUND_2">☁️ 第2回 空に見える水（20問）</option>
+                        <option value="ROUND_3">🧂 第3回 食塩と砂糖（20問）</option>
+                        <option value="ROUND_4">🕯️ 第4回 ろうそくの燃え方（20問）</option>
+                        <option value="ROUND_5">🦁 第5回 毛のある動物（20問）</option>
+                    </optgroup>
+                    <optgroup label="🍂 テーマ別にチャレンジ">
+                        <option value="SEASON">🍁 季節の移り変わり（昆虫・花・鳥・台風・星座）</option>
+                    </optgroup>
+                </select>
+
+                <!-- コンパクト復習モードボタン -->
+                <button id="review-mode-btn" onclick="toggleReviewMode()" class="text-[11px] sm:text-xs font-extrabold px-2.5 py-1 rounded-lg border transition-all flex items-center justify-center gap-1 bg-white border-rose-200 text-rose-600 hover:bg-rose-50 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer shrink-0">
+                    <span>💪</span>
+                    <span id="review-btn-text" class="ruby-ui"><ruby>復習<rt>ふくしゅう</rt></ruby>(0問)</span>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- メインクイズエリア（外枠余白を極限までスリム化） -->
+    <main class="max-w-3xl w-full mx-auto px-1.5 sm:px-4 mt-1.5 sm:mt-4 flex-1 flex flex-col">
+        
+        <!-- 復習モード通知バー -->
+        <div id="mode-banner" class="hidden mb-1.5 bg-rose-500 text-white text-[11px] sm:text-sm font-bold px-3 py-1.5 rounded-xl shadow-2xs flex items-center justify-between animate-pop">
+            <div class="flex items-center gap-1.5">
+                <span>🔥 にがて<ruby>復習<rt>ふくしゅう</rt></ruby>モード中</span>
+                <span id="review-remaining" class="bg-white/20 px-2 py-0.5 rounded-full text-[10px] sm:text-xs">のこり 0 問</span>
+            </div>
+            <button onclick="exitReviewMode()" class="underline hover:text-rose-100 text-[11px] sm:text-xs cursor-pointer">もどる</button>
+        </div>
+
+        <!-- クイズカード -->
+        <div class="bg-white rounded-2xl sm:rounded-3xl p-2.5 sm:p-6 quiz-card border border-blue-50 flex-1 flex flex-col justify-between">
+            <div>
+                <!-- 問題メタ情報（1行コンパクト） -->
+                <div class="flex items-center justify-between gap-1.5 mb-1.5 sm:mb-3">
+                    <div class="flex items-center gap-1 sm:gap-1.5 flex-wrap">
+                        <span id="q-round-badge" class="bg-indigo-100 text-indigo-700 text-[10px] sm:text-xs font-extrabold px-2 py-0.5 rounded-full">
+                            第1回
+                        </span>
+                        <span id="q-unit-badge" class="bg-blue-600 text-white text-[11px] sm:text-xs font-extrabold px-2.5 py-0.5 rounded-full">
+                            地面に見える水
+                        </span>
+                        <span id="q-category-badge" class="bg-sky-100 text-sky-700 text-[10px] sm:text-xs font-bold px-2 py-0.5 rounded-full">
+                            地球上の水
+                        </span>
+                    </div>
+                    <span id="q-streak-badge" class="hidden text-[10px] sm:text-xs font-extrabold text-amber-600 bg-amber-100 px-2 py-0.5 rounded-full shrink-0">
+                        🔥 絶好調！
+                    </span>
+                </div>
+
+                <!-- 問題文（1画面に収まる適度な高さとサイズ） -->
+                <div class="min-h-[3.5rem] sm:min-h-[5.5rem] flex items-center mb-2 sm:mb-5">
+                    <h2 id="question-text" class="text-[14px] sm:text-xl font-extrabold text-slate-800 ruby-question">
+                        <ruby>問題<rt>もんだい</rt></ruby>を<ruby>読<rt>よ</rt></ruby>みこんでいます...
+                    </h2>
+                </div>
+
+                <!-- 4択ボタン一覧（縦幅を詰めたスリム設計） -->
+                <div id="choices-container" class="grid grid-cols-1 sm:grid-cols-2 gap-1.5 sm:gap-3">
+                    <!-- JSで動的に生成 -->
+                </div>
+            </div>
+
+            <!-- 判定＆解説エリア（回答後に表示） -->
+            <div id="feedback-area" class="hidden mt-3 sm:mt-5 pt-2.5 sm:pt-4 border-t-2 border-dashed border-slate-200 animate-pop">
+                <div id="result-header" class="flex items-center gap-2 mb-1.5">
+                    <span id="result-icon" class="text-2xl sm:text-3xl">⭕</span>
+                    <div>
+                        <p id="result-title" class="text-base sm:text-xl font-extrabold">せいかい！</p>
+                        <p id="correct-answer-sub" class="text-xs sm:text-sm font-bold text-slate-600 mt-0.5 hidden ruby-choice"></p>
+                    </div>
+                </div>
+
+                <!-- テキストの豆知識・解説ボックス -->
+                <div class="bg-amber-50/90 border border-amber-200 rounded-xl p-2.5 sm:p-3.5 mt-1.5">
+                    <div class="flex items-center gap-1 text-amber-800 font-extrabold text-[11px] sm:text-xs mb-1">
+                        <span>💡</span>
+                        <span>ポイント・<ruby>豆知識<rt>まめちしき</rt></ruby></span>
+                    </div>
+                    <p id="explanation-text" class="text-xs sm:text-sm text-slate-700 font-medium ruby-explanation">
+                        解説テキストがここに入ります。
+                    </p>
+                </div>
+
+                <!-- 次の問題へボタン -->
+                <button id="next-btn" onclick="nextQuestion()" class="mt-3 sm:mt-4 w-full bg-gradient-to-r from-blue-600 to-sky-500 hover:from-blue-700 hover:to-sky-600 text-white font-extrabold text-sm sm:text-base py-2.5 sm:py-3.5 px-4 rounded-xl shadow-md shadow-blue-500/25 transition-all flex items-center justify-center gap-1.5 cursor-pointer">
+                    <span>つぎの<ruby>問題<rt>もんだい</rt></ruby>へ</span>
+                    <span class="text-base sm:text-lg">➡️</span>
+                </button>
+            </div>
+        </div>
+    </main>
+
+    <!-- コンパクトフッター -->
+    <footer class="max-w-3xl w-full mx-auto px-2 sm:px-4 mt-2 flex items-center justify-between text-[10px] sm:text-xs text-slate-400">
+        <p class="hidden sm:block">⌨️ キーボード：[1]〜[4]で選択 / [Enter]でつぎへ</p>
+        <p class="sm:hidden">全20ページ・全100問収録</p>
+        <button onclick="resetStats()" class="hover:text-slate-600 underline cursor-pointer"><ruby>成績<rt>せいせき</rt></ruby>リセット</button>
+    </footer>
+
+    <!-- リセット確認用カスタムモーダル -->
+    <div id="reset-modal" class="hidden fixed inset-0 bg-slate-900/50 backdrop-blur-xs z-50 flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl p-5 max-w-xs w-full shadow-2xl animate-pop">
+            <h3 class="text-base font-extrabold text-slate-800 mb-1.5"><ruby>成績<rt>せいせき</rt></ruby>をリセットしますか？</h3>
+            <p class="text-xs text-slate-600 mb-4 leading-relaxed">これまでのせいかい数や<ruby>連続<rt>れんぞく</rt></ruby>きろく、まちがえた<ruby>問題<rt>もんだい</rt></ruby>リストがすべて0にもどります。</p>
+            <div class="flex gap-2.5">
+                <button onclick="closeResetModal()" class="flex-1 py-2 px-3 rounded-xl border border-slate-200 text-xs font-bold text-slate-600 hover:bg-slate-50 cursor-pointer">やめる</button>
+                <button onclick="confirmReset()" class="flex-1 py-2 px-3 rounded-xl bg-rose-500 text-xs font-bold text-white hover:bg-rose-600 cursor-pointer">リセット</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // ==========================================
+        // 理科 第1回〜第5回 全20ページ（p.1〜p.20）完全準拠 問題データベース（全100問）
+        // ==========================================
+        const quizDatabase = [
+            // ==========================================
+            // 第1回：地面に見える水（20問）p.1〜p.4
+            // ==========================================
+            {
+                id: "sci_1_1",
+                round: "ROUND_1",
+                roundLabel: "第1回",
+                unit: "<ruby>地面<rt>じめん</rt></ruby>に<ruby>見<rt>み</rt></ruby>える<ruby>水<rt>みず</rt></ruby>",
+                category: "<ruby>地球上<rt>ちきゅうじょう</rt></ruby>の<ruby>水<rt>みず</rt></ruby>",
+                isSeason: false,
+                question: "<ruby>地球上<rt>ちきゅうじょう</rt></ruby>にある<ruby>水<rt>みず</rt></ruby>のうち、<ruby>海水<rt>かいすい</rt></ruby>と<ruby>淡水<rt>たんすい</rt></ruby>（<ruby>真水<rt>まみず</rt></ruby>）の<ruby>割合<rt>わりあい</rt></ruby>はおよそどれくらいでしょう？",
+                choices: [
+                    "<ruby>海水<rt>かいすい</rt></ruby> 97.5％ ／ <ruby>淡水<rt>たんすい</rt></ruby> 2.5％",
+                    "<ruby>海水<rt>かいすい</rt></ruby> 70.0％ ／ <ruby>淡水<rt>たんすい</rt></ruby> 30.0％",
+                    "<ruby>海水<rt>かいすい</rt></ruby> 50.0％ ／ <ruby>淡水<rt>たんすい</rt></ruby> 50.0％",
+                    "<ruby>海水<rt>かいすい</rt></ruby> 90.0％ ／ <ruby>淡水<rt>たんすい</rt></ruby> 10.0％"
+                ],
+                answerIndex: 0,
+                explanation: "<ruby>地球上<rt>ちきゅうじょう</rt></ruby>の水のうち、およそ97.5％が<ruby>海水<rt>かいすい</rt></ruby>で、<ruby>淡水<rt>たんすい</rt></ruby>（<ruby>真水<rt>まみず</rt></ruby>）はおよそ2.5％しかありません。"
+            },
+            {
+                id: "sci_1_2",
+                round: "ROUND_1",
+                roundLabel: "第1回",
+                unit: "<ruby>地面<rt>じめん</rt></ruby>に<ruby>見<rt>み</rt></ruby>える<ruby>水<rt>みず</rt></ruby>",
+                category: "<ruby>地球上<rt>ちきゅうじょう</rt></ruby>の<ruby>水<rt>みず</rt></ruby>",
+                isSeason: false,
+                question: "<ruby>地球上<rt>ちきゅうじょう</rt></ruby>のわずか2.5％しかない<ruby>淡水<rt>たんすい</rt></ruby>のうち、もっとも多く<ruby>存在<rt>そんざい</rt></ruby>しているのはどのような形でしょう？",
+                choices: [
+                    "<ruby>北極<rt>ほっきょく</rt></ruby>や<ruby>南極<rt>なんきょく</rt></ruby>などの<ruby>氷<rt>こおり</rt></ruby>や<ruby>氷河<rt>ひょうが</rt></ruby>",
+                    "<ruby>川<rt>かわ</rt></ruby>（<ruby>河川<rt>かせん</rt></ruby>）の<ruby>水<rt>みず</rt></ruby>",
+                    "<ruby>湖<rt>みずうみ</rt></ruby>や<ruby>沼<rt>ぬま</rt></ruby>（<ruby>湖沼<rt>こしょう</rt></ruby>）の<ruby>水<rt>みず</rt></ruby>",
+                    "<ruby>空気中<rt>くうきちゅう</rt></ruby>の<ruby>水蒸気<rt>すいじょうき</rt></ruby>"
+                ],
+                answerIndex: 0,
+                explanation: "<ruby>淡水<rt>たんすい</rt></ruby>のうちの多くは、<ruby>北極<rt>ほっきょく</rt></ruby>や<ruby>南極<rt>なんきょく</rt></ruby>などの<ruby>氷<rt>こおり</rt></ruby>や<ruby>氷河<rt>ひょうが</rt></ruby>の形で存在し、残りが<ruby>地下水<rt>ちかすい</rt></ruby>や<ruby>河川<rt>かせん</rt></ruby>・<ruby>湖沼<rt>こしょう</rt></ruby>などにあります。"
+            },
+            {
+                id: "sci_1_3",
+                round: "ROUND_1",
+                roundLabel: "第1回",
+                unit: "<ruby>地面<rt>じめん</rt></ruby>に<ruby>見<rt>み</rt></ruby>える<ruby>水<rt>みず</rt></ruby>",
+                category: "<ruby>地球<rt>ちきゅう</rt></ruby>にある<ruby>多<rt>おお</rt></ruby>くの<ruby>水<rt>みず</rt></ruby>",
+                isSeason: false,
+                question: "地球上にあるおよそ14億立方キロメートルの水を1辺1cmの立方体で表すと「1万4千<ruby>垓<rt>がい</rt></ruby>個分」になります。「<ruby>垓<rt>がい</rt></ruby>」は「<ruby>京<rt>けい</rt></ruby>」を何倍した数でしょう？",
+                choices: [
+                    "10000<ruby>倍<rt>ばい</rt></ruby>",
+                    "100<ruby>倍<rt>ばい</rt></ruby>",
+                    "1000<ruby>倍<rt>ばい</rt></ruby>",
+                    "10<ruby>倍<rt>ばい</rt></ruby>"
+                ],
+                answerIndex: 0,
+                explanation: "一を10000倍すると万、万を10000倍すると億、億を10000倍すると兆、兆を10000倍すると京、京を10000倍すると「<ruby>垓<rt>がい</rt></ruby>」になります。"
+            },
+            {
+                id: "sci_1_4",
+                round: "ROUND_1",
+                roundLabel: "第1回",
+                unit: "<ruby>地面<rt>じめん</rt></ruby>に<ruby>見<rt>み</rt></ruby>える<ruby>水<rt>みず</rt></ruby>",
+                category: "<ruby>日本<rt>にほん</rt></ruby>で<ruby>見<rt>み</rt></ruby>られる<ruby>水<rt>みず</rt></ruby>",
+                isSeason: false,
+                question: "<ruby>飛騨山脈<rt>ひださんみゃく</rt></ruby>（<ruby>富山県<rt>とやまけん</rt></ruby>・<ruby>新潟県<rt>にいがたけん</rt></ruby>・<ruby>岐阜県<rt>ぎふけん</rt></ruby>・<ruby>長野県<rt>ながのけん</rt></ruby>）などで<ruby>確認<rt>かくにん</rt></ruby>されている、日本にある<ruby>氷河<rt>ひょうが</rt></ruby>の1つはどれでしょう？",
+                choices: [
+                    "カクネ<ruby>里雪渓<rt>さとせっけい</rt></ruby>",
+                    "<ruby>真姿<rt>ますがた</rt></ruby>の<ruby>池<rt>いけ</rt></ruby>",
+                    "<ruby>湖山池<rt>こやまいけ</rt></ruby>",
+                    "<ruby>網走湖<rt>あばしりこ</rt></ruby>"
+                ],
+                answerIndex: 0,
+                explanation: "カクネ<ruby>里雪渓<rt>さとせっけい</rt></ruby>は日本で確認された<ruby>氷河<rt>ひょうが</rt></ruby>の1つです。<ruby>真姿<rt>ますがた</rt></ruby>の<ruby>池<rt>いけ</rt></ruby>や<ruby>お鷹の道<rt>おたかのみち</rt></ruby>（<ruby>東京都<rt>とうきょうと</rt></ruby>）は<ruby>湧水<rt>ゆうすい</rt></ruby>（わき水）で有名です。"
+            },
+            {
+                id: "sci_1_5",
+                round: "ROUND_1",
+                roundLabel: "第1回",
+                unit: "<ruby>地面<rt>じめん</rt></ruby>に<ruby>見<rt>み</rt></ruby>える<ruby>水<rt>みず</rt></ruby>",
+                category: "<ruby>日本<rt>にほん</rt></ruby>で<ruby>見<rt>み</rt></ruby>られる<ruby>水<rt>みず</rt></ruby>",
+                isSeason: false,
+                question: "<ruby>北海道<rt>ほっかいどう</rt></ruby>の「<ruby>屈斜路湖<rt>くっしゃろこ</rt></ruby>」や<ruby>青森県<rt>あおもりけん</rt></ruby>・<ruby>秋田県<rt>あきたけん</rt></ruby>の「<ruby>十和田湖<rt>とわだこ</rt></ruby>」のように、<ruby>火山<rt>かざん</rt></ruby>の活動によってできた大きなくぼみに水がたまってできた湖を何というでしょう？",
+                choices: [
+                    "カルデラ<ruby>湖<rt>こ</rt></ruby>",
+                    "<ruby>堰<rt>せ</rt></ruby>き<ruby>止<rt>と</rt></ruby>め<ruby>湖<rt>こ</rt></ruby>",
+                    "<ruby>三日月湖<rt>みかづきこ</rt></ruby>",
+                    "<ruby>潟湖<rt>せきこ</rt></ruby>"
+                ],
+                answerIndex: 0,
+                explanation: "火山の活動でできた大きなくぼみ（カルデラ）に水がたまってできた湖を「カルデラ<ruby>湖<rt>こ</rt></ruby>」といいます。"
+            },
+            {
+                id: "sci_1_6",
+                round: "ROUND_1",
+                roundLabel: "第1回",
+                unit: "<ruby>地面<rt>じめん</rt></ruby>に<ruby>見<rt>み</rt></ruby>える<ruby>水<rt>みず</rt></ruby>",
+                category: "<ruby>湖沼<rt>こしょう</rt></ruby>とは？",
+                isSeason: false,
+                question: "「<ruby>池<rt>いけ</rt></ruby>」と名前がついている中で日本最大の<ruby>鳥取県<rt>とっとりけん</rt></ruby>の「<ruby>湖山池<rt>こやまいけ</rt></ruby>（6.99km²）」と、<ruby>長野県<rt>ながのけん</rt></ruby>の「<ruby>綱網湖<rt>ななつこ</rt></ruby>（0.14km²）」からわかることは何でしょう？",
+                choices: [
+                    "<ruby>池<rt>いけ</rt></ruby>より<ruby>湖<rt>みずうみ</rt></ruby>の方が小さいこともあり、<ruby>湖<rt>みずうみ</rt></ruby>と<ruby>池<rt>いけ</rt></ruby>や<ruby>沼<rt>ぬま</rt></ruby>の<ruby>区別<rt>くべつ</rt></ruby>はあいまいである",
+                    "すべての<ruby>湖<rt>みずうみ</rt></ruby>は必ず<ruby>池<rt>いけ</rt></ruby>よりも面積が大きい",
+                    "<ruby>池<rt>いけ</rt></ruby>はすべて人間がつくった人工のものだけである",
+                    "<ruby>湖<rt>みずうみ</rt></ruby>は海水で、<ruby>池<rt>いけ</rt></ruby>はすべて淡水である"
+                ],
+                answerIndex: 0,
+                explanation: "大きいものを湖、小さいものを池や沼とよぶことが多いですが、<ruby>湖山池<rt>こやまいけ</rt></ruby>と<ruby>綱網湖<rt>ななつこ</rt></ruby>のように例外もあり、区別はあいまいなものです。"
+            },
+            {
+                id: "sci_1_7",
+                round: "ROUND_1",
+                roundLabel: "第1回",
+                unit: "<ruby>地面<rt>じめん</rt></ruby>に<ruby>見<rt>み</rt></ruby>える<ruby>水<rt>みず</rt></ruby>",
+                category: "<ruby>湖沼<rt>こしょう</rt></ruby>とは？",
+                isSeason: false,
+                question: "<ruby>鳥取県<rt>とっとりけん</rt></ruby>の<ruby>湖山池<rt>こやまいけ</rt></ruby>のように、<ruby>海水<rt>かいすい</rt></ruby>と<ruby>淡水<rt>たんすい</rt></ruby>がまざった水のことを何というでしょう？",
+                choices: [
+                    "<ruby>汽水<rt>きすい</rt></ruby>",
+                    "<ruby>硬水<rt>こうすい</rt></ruby>",
+                    "<ruby>軟水<rt>なんすい</rt></ruby>",
+                    "<ruby>蒸留水<rt>じょうりゅうすい</rt></ruby>"
+                ],
+                answerIndex: 0,
+                explanation: "<ruby>海水<rt>かいすい</rt></ruby>と<ruby>淡水<rt>たんすい</rt></ruby>がまざった水を「<ruby>汽水<rt>きすい</rt></ruby>」といいます。<ruby>湖山池<rt>こやまいけ</rt></ruby>には日本海からの海水が流れこみ、迷いこんだアザラシが見つかったこともあります。"
+            },
+            {
+                id: "sci_1_8",
+                round: "ROUND_1",
+                roundLabel: "第1回",
+                unit: "<ruby>地面<rt>じめん</rt></ruby>に<ruby>見<rt>み</rt></ruby>える<ruby>水<rt>みず</rt></ruby>",
+                category: "<ruby>水<rt>みず</rt></ruby>と<ruby>魚<rt>さかな</rt></ruby>",
+                isSeason: false,
+                question: "<ruby>東京湾<rt>とうきょうわん</rt></ruby>などの<ruby>海水<rt>かいすい</rt></ruby>で生活する「<ruby>海水魚<rt>かいすいぎょ</rt></ruby>」のなかまはどれでしょう？",
+                choices: [
+                    "クロダイ・マゴチ",
+                    "コイ・フナ",
+                    "ヒメマス・ニジマス",
+                    "ブラックバス・ブルーギル"
+                ],
+                answerIndex: 0,
+                explanation: "クロダイやマゴチは<ruby>海水魚<rt>かいすいぎょ</rt></ruby>、コイやフナは<ruby>淡水魚<rt>たんすいぎょ</rt></ruby>です。"
+            },
+            {
+                id: "sci_1_9",
+                round: "ROUND_1",
+                roundLabel: "第1回",
+                unit: "<ruby>地面<rt>じめん</rt></ruby>に<ruby>見<rt>み</rt></ruby>える<ruby>水<rt>みず</rt></ruby>",
+                category: "<ruby>水<rt>みず</rt></ruby>と<ruby>魚<rt>さかな</rt></ruby>",
+                isSeason: false,
+                question: "<ruby>琵琶湖<rt>びわこ</rt></ruby>などにフィッシング（<ruby>釣<rt>つ</rt></ruby>り）の目的で外国から持ちこまれ、食欲が旺盛でもともとすんでいた魚を食べてしまうなどの問題が起きている魚はどれでしょう？",
+                choices: [
+                    "ブラックバス・ブルーギル",
+                    "ヒメマス・ニジマス",
+                    "クロダイ・マゴチ",
+                    "サケ・アユ"
+                ],
+                answerIndex: 0,
+                explanation: "ブラックバスやブルーギルは外国から持ちこまれた魚で、もともとその場所にすんでいた魚を食べてしまう問題が起きています。"
+            },
+            {
+                id: "sci_1_10",
+                round: "ROUND_1",
+                roundLabel: "第1回",
+                unit: "<ruby>地面<rt>じめん</rt></ruby>に<ruby>見<rt>み</rt></ruby>える<ruby>水<rt>みず</rt></ruby>",
+                category: "<ruby>水<rt>みず</rt></ruby>と<ruby>魚<rt>さかな</rt></ruby>",
+                isSeason: false,
+                question: "火山活動でできた<ruby>十和田湖<rt>とわだこ</rt></ruby>にはもともと魚がいませんでしたが、人の手によって<ruby>放流<rt>ほうりゅう</rt></ruby>され、定着した魚はどれでしょう？",
+                choices: [
+                    "ヒメマス・ニジマス",
+                    "クロダイ・マゴチ",
+                    "クジラ・シャチ",
+                    "トビウオ・マグロ"
+                ],
+                answerIndex: 0,
+                explanation: "<ruby>十和田湖<rt>とわだこ</rt></ruby>にはもともと魚がいませんでしたが、ヒメマスやニジマスなどが<ruby>放流<rt>ほうりゅう</rt></ruby>されました。"
+            },
+            {
+                id: "sci_1_11",
+                round: "ROUND_1",
+                roundLabel: "第1回",
+                unit: "<ruby>地面<rt>じめん</rt></ruby>に<ruby>見<rt>み</rt></ruby>える<ruby>水<rt>みず</rt></ruby>",
+                category: "<ruby>海<rt>うみ</rt></ruby>と<ruby>川<rt>かわ</rt></ruby>を<ruby>行<rt>い</rt></ruby>き<ruby>来<rt>き</rt></ruby>する<ruby>魚<rt>さかな</rt></ruby>",
+                isSeason: false,
+                question: "<ruby>太平洋<rt>たいへいよう</rt></ruby>の北で3〜5年過ごしたあと、秋のころに生まれた川へもどってきて<ruby>卵<rt>たまご</rt></ruby>を<ruby>産<rt>う</rt></ruby>む魚はどれでしょう？",
+                choices: [
+                    "サケ",
+                    "ウナギ",
+                    "コイ",
+                    "フナ"
+                ],
+                answerIndex: 0,
+                explanation: "サケは川で生まれ、海で育ったあと、生まれた川へもどって卵を産みます。"
+            },
+            {
+                id: "sci_1_12",
+                round: "ROUND_1",
+                roundLabel: "第1回",
+                unit: "<ruby>地面<rt>じめん</rt></ruby>に<ruby>見<rt>み</rt></ruby>える<ruby>水<rt>みず</rt></ruby>",
+                category: "<ruby>海<rt>うみ</rt></ruby>と<ruby>川<rt>かわ</rt></ruby>を<ruby>行<rt>い</rt></ruby>き<ruby>来<rt>き</rt></ruby>する<ruby>魚<rt>さかな</rt></ruby>",
+                isSeason: false,
+                question: "川で5〜10年過ごしたあと、卵を産むために生まれた<ruby>海<rt>うみ</rt></ruby>へもどっていく魚はどれでしょう？",
+                choices: [
+                    "ウナギ",
+                    "サケ",
+                    "ヒメマス",
+                    "ブラックバス"
+                ],
+                answerIndex: 0,
+                explanation: "ウナギはサケとは逆で、川で育ち、卵を産むために海へもどっていきます。また、アユは小さいころ海や湖で過ごし、春になると川へやってきます。"
+            },
+            {
+                id: "sci_1_13",
+                round: "ROUND_1",
+                roundLabel: "第1回",
+                unit: "<ruby>地面<rt>じめん</rt></ruby>に<ruby>見<rt>み</rt></ruby>える<ruby>水<rt>みず</rt></ruby>",
+                category: "<ruby>富士五湖<rt>ふじごこ</rt></ruby>",
+                isSeason: false,
+                question: "<ruby>富士山<rt>ふじさん</rt></ruby>の<ruby>噴火<rt>ふんか</rt></ruby>によって<ruby>溶岩<rt>ようがん</rt></ruby>などで川の流れが<ruby>堰<rt>せ</rt></ruby>き<ruby>止<rt>と</rt></ruby>められてできた「<ruby>富士五湖<rt>ふじごこ</rt></ruby>」の5つの湖はどれでしょう？",
+                choices: [
+                    "<ruby>本栖湖<rt>もとすこ</rt></ruby>・<ruby>精進湖<rt>しょうじこ</rt></ruby>・<ruby>西湖<rt>さいこ</rt></ruby>・<ruby>河口湖<rt>かわぐちこ</rt></ruby>・<ruby>山中湖<rt>やまなかこ</rt></ruby>",
+                    "<ruby>琵琶湖<rt>びわこ</rt></ruby>・<ruby>霞ヶ浦<rt>かすみがうら</rt></ruby>・<ruby>浜名湖<rt>はまなこ</rt></ruby>・<ruby>十和田湖<rt>とわだこ</rt></ruby>・<ruby>屈斜路湖<rt>くっしゃろこ</rt></ruby>",
+                    "<ruby>諏訪湖<rt>すわこ</rt></ruby>・<ruby>野尻湖<rt>のじりこ</rt></ruby>・<ruby>中禅寺湖<rt>ちゅうぜんじこ</rt></ruby>・<ruby>芦ノ湖<rt>あしのこ</rt></ruby>・<ruby>奥多摩湖<rt>おくたまこ</rt></ruby>",
+                    "<ruby>湖山池<rt>こやまいけ</rt></ruby>・<ruby>網走湖<rt>あばしりこ</rt></ruby>・<ruby>サロマ湖<rt>サロマこ</rt></ruby>・<ruby>猪苗代湖<rt>いなわしろこ</rt></ruby>・<ruby>田沢湖<rt>たざわこ</rt></ruby>"
+                ],
+                answerIndex: 0,
+                explanation: "<ruby>富士五湖<rt>ふじごこ</rt></ruby>（<ruby>本栖湖<rt>もとすこ</rt></ruby>・<ruby>精進湖<rt>しょうじこ</rt></ruby>・<ruby>西湖<rt>さいこ</rt></ruby>・<ruby>河口湖<rt>かわぐちこ</rt></ruby>・<ruby>山中湖<rt>やまなかこ</rt></ruby>）は、富士山の噴火によって流れが<ruby>堰<rt>せ</rt></ruby>き<ruby>止<rt>と</rt></ruby>められてできた「<ruby>堰止湖<rt>せきとめこ</rt></ruby>」です。"
+            },
+            {
+                id: "sci_1_14",
+                round: "ROUND_1",
+                roundLabel: "第1回",
+                unit: "<ruby>地面<rt>じめん</rt></ruby>に<ruby>見<rt>み</rt></ruby>える<ruby>水<rt>みず</rt></ruby>",
+                category: "<ruby>富士五湖<rt>ふじごこ</rt></ruby>",
+                isSeason: false,
+                question: "別々の湖である<ruby>本栖湖<rt>もとすこ</rt></ruby>・<ruby>精進湖<rt>しょうじこ</rt></ruby>・<ruby>西湖<rt>さいこ</rt></ruby>の3つの湖の<ruby>水面<rt>すいめん</rt></ruby>の高さ（標高約900m）がいつも同じなのはなぜでしょう？",
+                choices: [
+                    "<ruby>地面<rt>じめん</rt></ruby>の下で<ruby>地下水<rt>ちかすい</rt></ruby>としてつながっているから",
+                    "3つの湖がすべて巨大なコンクリート水路でつながっているから",
+                    "3つの湖に降る雨の量が毎日まったく同じだから",
+                    "3つの湖の底の深さがすべて同じだから"
+                ],
+                answerIndex: 0,
+                explanation: "<ruby>本栖湖<rt>もとすこ</rt></ruby>・<ruby>精進湖<rt>しょうじこ</rt></ruby>・<ruby>西湖<rt>さいこ</rt></ruby>はかつて1つの大きな湖（せのうみ）が溶岩で分断されたため、今も<ruby>地下水<rt>ちかすい</rt></ruby>でつながっており水面の高さが同じになります。"
+            },
+            {
+                id: "sci_1_15",
+                round: "ROUND_1",
+                roundLabel: "第1回",
+                unit: "<ruby>地面<rt>じめん</rt></ruby>に<ruby>見<rt>み</rt></ruby>える<ruby>水<rt>みず</rt></ruby>",
+                category: "<ruby>日本の川<rt>にほんのかわ</rt></ruby>",
+                isSeason: false,
+                question: "日本を代表する河川としてテキストの地図で紹介されている川の正しい組み合わせはどれでしょう？",
+                choices: [
+                    "<ruby>信濃川<rt>しなのがわ</rt></ruby>・<ruby>利根川<rt>とねがわ</rt></ruby>・<ruby>石狩川<rt>いしかりがわ</rt></ruby>",
+                    "<ruby>ナイル川<rt>ナイルがわ</rt></ruby>・<ruby>アマゾン川<rt>アマゾンがわ</rt></ruby>・<ruby>ミシシッピ川<rt>ミシシッピがわ</rt></ruby>",
+                    "<ruby>江戸川<rt>えどがわ</rt></ruby>・<ruby>神田川<rt>かんだがわ</rt></ruby>・<ruby>目黒川<rt>めぐろがわ</rt></ruby>",
+                    "<ruby>桂川<rt>かつらがわ</rt></ruby>・<ruby>鴨川<rt>かもがわ</rt></ruby>・<ruby>木津川<rt>きづがわ</rt></ruby>"
+                ],
+                answerIndex: 0,
+                explanation: "<ruby>信濃川<rt>しなのがわ</rt></ruby>（新潟・長野）、<ruby>利根川<rt>とねがわ</rt></ruby>（関東・長野）、<ruby>石狩川<rt>いしかりがわ</rt></ruby>（北海道）などが日本を代表する大河川です。"
+            },
+            {
+                id: "sci_1_16",
+                round: "ROUND_1",
+                roundLabel: "第1回",
+                unit: "<ruby>地面<rt>じめん</rt></ruby>に<ruby>見<rt>み</rt></ruby>える<ruby>水<rt>みず</rt></ruby>",
+                category: "<ruby>季節<rt>きせつ</rt></ruby>の<ruby>移<rt>うつ</rt></ruby>り<ruby>変<rt>か</rt></ruby>わり",
+                isSeason: true,
+                question: "テキストの「<ruby>季節<rt>きせつ</rt></ruby>の<ruby>移<rt>うつ</rt></ruby>り<ruby>変<rt>か</rt></ruby>わり」で紹介されている「<ruby>夏<rt>なつ</rt></ruby>に<ruby>鳴<rt>な</rt></ruby>く<ruby>昆虫<rt>こんちゅう</rt></ruby>」の2つはどれでしょう？",
+                choices: [
+                    "アブラゼミ・ツクツクボウシ",
+                    "エンマコオロギ・キリギリス",
+                    "マツムシ・ウマオイ",
+                    "スズムシ・クツワムシ"
+                ],
+                answerIndex: 0,
+                explanation: "アブラゼミやツクツクボウシは「<ruby>夏<rt>なつ</rt></ruby>に<ruby>鳴<rt>な</rt></ruby>く<ruby>昆虫<rt>こんちゅう</rt></ruby>」です。"
+            },
+            {
+                id: "sci_1_17",
+                round: "ROUND_1",
+                roundLabel: "第1回",
+                unit: "<ruby>地面<rt>じめん</rt></ruby>に<ruby>見<rt>み</rt></ruby>える<ruby>水<rt>みず</rt></ruby>",
+                category: "<ruby>季節<rt>きせつ</rt></ruby>の<ruby>移<rt>うつ</rt></ruby>り<ruby>変<rt>か</rt></ruby>わり",
+                isSeason: true,
+                question: "テキストの「<ruby>季節<rt>きせつ</rt></ruby>の<ruby>移<rt>うつ</rt></ruby>り<ruby>変<rt>か</rt></ruby>わり」で紹介されている「<ruby>秋<rt>あき</rt></ruby>に<ruby>鳴<rt>な</rt></ruby>く<ruby>昆虫<rt>こんちゅう</rt></ruby>」4つの正しい組み合わせはどれでしょう？",
+                choices: [
+                    "エンマコオロギ・キリギリス・マツムシ・ウマオイ",
+                    "アブラゼミ・ミンミンゼミ・クマゼミ・ニイニイゼミ",
+                    "カブトムシ・クワガタムシ・タガメ・ゲンゴロウ",
+                    "モンシロチョウ・アゲハチョウ・テントウムシ・ミツバチ"
+                ],
+                answerIndex: 0,
+                explanation: "エンマコオロギ・キリギリス・マツムシ・ウマオイは「<ruby>秋<rt>あき</rt></ruby>に<ruby>鳴<rt>な</rt></ruby>く<ruby>昆虫<rt>こんちゅう</rt></ruby>」です。"
+            },
+            {
+                id: "sci_1_18",
+                round: "ROUND_1",
+                roundLabel: "第1回",
+                unit: "<ruby>地面<rt>じめん</rt></ruby>に<ruby>見<rt>み</rt></ruby>える<ruby>水<rt>みず</rt></ruby>",
+                category: "<ruby>水の循環<rt>みずのじゅんかん</rt></ruby>",
+                isSeason: false,
+                question: "海の<ruby>水<rt>みず</rt></ruby>が太陽の熱であたためられて目に見えない気体になり、空へのぼっていくときの姿（名前）は何でしょう？",
+                choices: [
+                    "<ruby>水蒸気<rt>すいじょうき</rt></ruby>",
+                    "<ruby>氷河<rt>ひょうが</rt></ruby>",
+                    "<ruby>地下水<rt>ちかすい</rt></ruby>",
+                    "<ruby>霧<rt>きり</rt></ruby>"
+                ],
+                answerIndex: 0,
+                explanation: "水は海から<ruby>水蒸気<rt>すいじょうき</rt></ruby>となって空へ上がり、<ruby>雲<rt>くも</rt></ruby>になって雨や雪として地面に降り、川や地下水を通って再び海へもどります。"
+            },
+            {
+                id: "sci_1_19",
+                round: "ROUND_1",
+                roundLabel: "第1回",
+                unit: "<ruby>地面<rt>じめん</rt></ruby>に<ruby>見<rt>み</rt></ruby>える<ruby>水<rt>みず</rt></ruby>",
+                category: "<ruby>水の性質<rt>みずのせいしつ</rt></ruby>",
+                isSeason: false,
+                question: "「すべての<ruby>川<rt>かわ</rt></ruby>が<ruby>淡水<rt>たんすい</rt></ruby>というわけではない」のはなぜでしょう？",
+                choices: [
+                    "海に近づく<ruby>河口<rt>かこう</rt></ruby>付近では、<ruby>海水<rt>かいすい</rt></ruby>が流れこんでまざるから",
+                    "山の頂上にはもともと塩が大量にうまっているから",
+                    "雨のつぶはもともとすべて塩からい海水だから",
+                    "日本の川にはすべて塩の工場があるから"
+                ],
+                answerIndex: 0,
+                explanation: "海に流れこむ<ruby>河口<rt>かこう</rt></ruby>付近では海水が入りこんで<ruby>汽水<rt>きすい</rt></ruby>になるため、すべての川の水が真水（淡水）というわけではありません。"
+            },
+            {
+                id: "sci_1_20",
+                round: "ROUND_1",
+                roundLabel: "第1回",
+                unit: "<ruby>地面<rt>じめん</rt></ruby>に<ruby>見<rt>み</rt></ruby>える<ruby>水<rt>みず</rt></ruby>",
+                category: "<ruby>日本のまわりの海<rt>にほんのまわりのうみ</rt></ruby>",
+                isSeason: false,
+                question: "日本列島を囲んでいる4つの海の名前として正しいものはどれでしょう？",
+                choices: [
+                    "<ruby>太平洋<rt>たいへいよう</rt></ruby>・<ruby>日本海<rt>にほんかい</rt></ruby>・オホーツク<ruby>海<rt>かい</rt></ruby>・<ruby>東<rt>ひがし</rt></ruby>シナ<ruby>海<rt>かい</rt></ruby>",
+                    "<ruby>大西洋<rt>たいせいよう</rt></ruby>・インド<ruby>洋<rt>よう</rt></ruby>・<ruby>地中海<rt>ちちゅうかい</rt></ruby>・<ruby>紅海<rt>こうかい</rt></ruby>",
+                    "<ruby>北極海<rt>ほっきょくかい</rt></ruby>・<ruby>南極海<rt>なんきょくかい</rt></ruby>・カリブ<ruby>海<rt>かい</rt></ruby>・ベーリング<ruby>海<rt>かい</rt></ruby>",
+                    "<ruby>黒海<rt>こっかい</rt></ruby>・<ruby>死海<rt>しかい</rt></ruby>・カスピ<ruby>海<rt>かい</rt></ruby>・アラル<ruby>海<rt>かい</rt></ruby>"
+                ],
+                answerIndex: 0,
+                explanation: "日本は<ruby>太平洋<rt>たいへいよう</rt></ruby>・<ruby>日本海<rt>にほんかい</rt></ruby>・オホーツク<ruby>海<rt>かい</rt></ruby>・<ruby>東<rt>ひがし</rt></ruby>シナ<ruby>海<rt>かい</rt></ruby>の4つの海に囲まれています。"
+            },
+
+            // ==========================================
+            // 第2回：空に見える水（20問）p.5〜p.8
+            // ==========================================
+            {
+                id: "sci_2_1",
+                round: "ROUND_2",
+                roundLabel: "第2回",
+                unit: "<ruby>空<rt>そら</rt></ruby>に<ruby>見<rt>み</rt></ruby>える<ruby>水<rt>みず</rt></ruby>",
+                category: "<ruby>雲<rt>くも</rt></ruby>のしくみ",
+                isSeason: false,
+                question: "空に浮かんでいる「<ruby>雲<rt>くも</rt></ruby>」の正体は何でしょう？",
+                choices: [
+                    "<ruby>空気中<rt>くうきちゅう</rt></ruby>の<ruby>水蒸気<rt>すいじょうき</rt></ruby>が冷えてできた小さな<ruby>水<rt>みず</rt></ruby>や<ruby>氷<rt>こおり</rt></ruby>のつぶが集まったもの",
+                    "工場から出た白いけむりが空高くたまったもの",
+                    "綿あめのようなやわらかい気体の集まり",
+                    "宇宙から降ってきた白いチリが集まったもの"
+                ],
+                answerIndex: 0,
+                explanation: "<ruby>雲<rt>くも</rt></ruby>は気体（水蒸気）ではなく、冷えてできた小さな「<ruby>水<rt>みず</rt></ruby>や<ruby>氷<rt>こおり</rt></ruby>のつぶ」が集まったものです。10種類に分けたものを「<ruby>十種雲形<rt>じっしゅうんけい</rt></ruby>」といいます。"
+            },
+            {
+                id: "sci_2_2",
+                round: "ROUND_2",
+                roundLabel: "第2回",
+                unit: "<ruby>空<rt>そら</rt></ruby>に<ruby>見<rt>み</rt></ruby>える<ruby>水<rt>みず</rt></ruby>",
+                category: "<ruby>上層雲<rt>じょうそううん</rt></ruby>",
+                isSeason: false,
+                question: "5〜13kmの高い空にあらわれ、すべて「<ruby>氷<rt>こおり</rt></ruby>のつぶ」でできている「<ruby>上層雲<rt>じょうそううん</rt></ruby>」の3つはどれでしょう？",
+                choices: [
+                    "<ruby>巻雲<rt>けんうん</rt></ruby>（すじ雲）・<ruby>巻積雲<rt>けんせきうん</rt></ruby>（うろこ雲）・<ruby>巻層雲<rt>けんそううん</rt></ruby>（うす雲）",
+                    "<ruby>積雲<rt>せきうん</rt></ruby>（わた雲）・<ruby>積乱雲<rt>せきらんうん</rt></ruby>（入道雲）・<ruby>層雲<rt>そううん</rt></ruby>（きり雲）",
+                    "<ruby>高積雲<rt>こうせきうん</rt></ruby>（ひつじ雲）・<ruby>高層雲<rt>こうそううん</rt></ruby>（おぼろ雲）・<ruby>乱層雲<rt>らんそううん</rt></ruby>（雨雲）",
+                    "<ruby>層積雲<rt>そうせきうん</rt></ruby>（くもり雲）・<ruby>かなとこ雲<rt>かなとこぐも</rt></ruby>・<ruby>かさ雲<rt>かさぐも</rt></ruby>"
+                ],
+                answerIndex: 0,
+                explanation: "漢字に「<ruby>巻<rt>けん</rt></ruby>」がつく3つの雲（<ruby>巻雲<rt>けんうん</rt></ruby>・<ruby>巻積雲<rt>けんせきうん</rt></ruby>・<ruby>巻層雲<rt>けんそううん</rt></ruby>）は、世界で最も高い山エベレスト（8848m）よりも高いところにもあらわれる<ruby>上層雲<rt>じょうそううん</rt></ruby>です。"
+            },
+            {
+                id: "sci_2_3",
+                round: "ROUND_2",
+                roundLabel: "第2回",
+                unit: "<ruby>空<rt>そら</rt></ruby>に<ruby>見<rt>み</rt></ruby>える<ruby>水<rt>みず</rt></ruby>",
+                category: "<ruby>中層雲<rt>ちゅうそううん</rt></ruby>",
+                isSeason: false,
+                question: "2〜7kmの高さにあらわれる「<ruby>中層雲<rt>ちゅうそううん</rt></ruby>」の3つ（<ruby>高積雲<rt>こうせきうん</rt></ruby>・<ruby>高層雲<rt>こうそううん</rt></ruby>・<ruby>乱層雲<rt>らんそううん</rt></ruby>）のうち、雨や雪を降らせる「<ruby>雨雲<rt>あまぐも</rt></ruby>・<ruby>雪雲<rt>ゆきぐも</rt></ruby>」ともよばれる雲はどれでしょう？",
+                choices: [
+                    "<ruby>乱層雲<rt>らんそううん</rt></ruby>",
+                    "<ruby>巻雲<rt>けんうん</rt></ruby>",
+                    "<ruby>積雲<rt>せきうん</rt></ruby>",
+                    "<ruby>巻積雲<rt>けんせきうん</rt></ruby>"
+                ],
+                answerIndex: 0,
+                explanation: "<ruby>乱層雲<rt>らんそううん</rt></ruby>は<ruby>雨雲<rt>あまぐも</rt></ruby>ともよばれ、広い範囲にシトシトと比較的弱い雨や雪を降らせる代表的な雲です。"
+            },
+            {
+                id: "sci_2_4",
+                round: "ROUND_2",
+                roundLabel: "第2回",
+                unit: "<ruby>空<rt>そら</rt></ruby>に<ruby>見<rt>み</rt></ruby>える<ruby>水<rt>みず</rt></ruby>",
+                category: "<ruby>下層雲<rt>かそううん</rt></ruby>",
+                isSeason: false,
+                question: "地面付近〜2kmの高さにあらわれる<ruby>下層雲<rt>かそううん</rt></ruby>のうち、<ruby>雷雨<rt>らいう</rt></ruby>をともなう激しい雨を降らせることがあり、一番高いところが10km以上になって上の方がつぶれたものを「<ruby>かなとこ雲<rt>かなとこぐも</rt></ruby>」ともいう雲はどれでしょう？",
+                choices: [
+                    "<ruby>積乱雲<rt>せきらんうん</rt></ruby>（<ruby>入道雲<rt>にゅうどうぐも</rt></ruby>・<ruby>雷雲<rt>かみなりぐも</rt></ruby>）",
+                    "<ruby>層雲<rt>そううん</rt></ruby>（きり<ruby>雲<rt>ぐも</rt></ruby>）",
+                    "<ruby>巻層雲<rt>けんそううん</rt></ruby>（うす<ruby>雲<rt>ぐも</rt></ruby>）",
+                    "<ruby>高積雲<rt>こうせきうん</rt></ruby>（ひつじ<ruby>雲<rt>ぐも</rt></ruby>）"
+                ],
+                answerIndex: 0,
+                explanation: "<ruby>積乱雲<rt>せきらんうん</rt></ruby>（入道雲）は縦に大きく発達し、短時間に激しい雨や雷をもたらします。"
+            },
+            {
+                id: "sci_2_5",
+                round: "ROUND_2",
+                roundLabel: "第2回",
+                unit: "<ruby>空<rt>そら</rt></ruby>に<ruby>見<rt>み</rt></ruby>える<ruby>水<rt>みず</rt></ruby>",
+                category: "<ruby>観天望気<rt>かんてんぼうき</rt></ruby>",
+                isSeason: false,
+                question: "昔の人が天気予報の代わりに空や自然現象を見て天気を予測することわざを「<ruby>観天望気<rt>かんてんぼうき</rt></ruby>」といいます。「<ruby>太陽<rt>たいよう</rt></ruby>や<ruby>月<rt>つき</rt></ruby>にうすい<ruby>雲<rt>くも</rt></ruby>がかかると<ruby>雨<rt>あめ</rt></ruby>」のとき、太陽をおおっている雲は何でしょう？",
+                choices: [
+                    "<ruby>巻層雲<rt>けんそううん</rt></ruby>（うす<ruby>雲<rt>ぐも</rt></ruby>）",
+                    "<ruby>積乱雲<rt>せきらんうん</rt></ruby>（<ruby>入道雲<rt>にゅうどうぐも</rt></ruby>）",
+                    "<ruby>積雲<rt>せきうん</rt></ruby>（わた<ruby>雲<rt>ぐも</rt></ruby>）",
+                    "<ruby>層雲<rt>そううん</rt></ruby>（きり<ruby>雲<rt>ぐも</rt></ruby>）"
+                ],
+                answerIndex: 0,
+                explanation: "<ruby>巻層雲<rt>けんそううん</rt></ruby>（うす雲）が空一面に広がると太陽や月のまわりに光の輪（かさ）ができ、天気が下り坂（雨）になるサインとされています。"
+            },
+            {
+                id: "sci_2_6",
+                round: "ROUND_2",
+                roundLabel: "第2回",
+                unit: "<ruby>空<rt>そら</rt></ruby>に<ruby>見<rt>み</rt></ruby>える<ruby>水<rt>みず</rt></ruby>",
+                category: "<ruby>観天望気<rt>かんてんぼうき</rt></ruby>",
+                isSeason: false,
+                question: "「<ruby>山<rt>やま</rt></ruby>に<ruby>かさ<rt>かさ</rt></ruby>がかかると<ruby>雨<rt>あめ</rt></ruby>」という観天望気のように、<ruby>富士山<rt>ふじさん</rt></ruby>などの山のてっぺんに傘をかぶったようにできる雲を何というでしょう？",
+                choices: [
+                    "<ruby>かさ雲<rt>かさぐも</rt></ruby>（レンズ<ruby>雲<rt>ぐも</rt></ruby>のなかま）",
+                    "<ruby>かなとこ雲<rt>かなとこぐも</rt></ruby>",
+                    "うろこ<ruby>雲<rt>ぐも</rt></ruby>",
+                    "すじ<ruby>雲<rt>ぐも</rt></ruby>"
+                ],
+                answerIndex: 0,
+                explanation: "湿った風が山にぶつかって上昇し、山頂付近に傘のようにできる雲を「<ruby>かさ雲<rt>かさぐも</rt></ruby>」といいます。"
+            },
+            {
+                id: "sci_2_7",
+                round: "ROUND_2",
+                roundLabel: "第2回",
+                unit: "<ruby>空<rt>そら</rt></ruby>に<ruby>見<rt>み</rt></ruby>える<ruby>水<rt>みず</rt></ruby>",
+                category: "<ruby>空<rt>そら</rt></ruby>から<ruby>降<rt>ふ</rt></ruby>る<ruby>水<rt>みず</rt></ruby>",
+                isSeason: false,
+                question: "雲の中で成長した水のつぶが重みで落ちてくる「大きな<ruby>雨<rt>あめ</rt></ruby>のつぶ」の正しい形はどれでしょう？",
+                choices: [
+                    "<ruby>空気<rt>くうき</rt></ruby>の<ruby>影響<rt>えいきょう</rt></ruby>で下の方がつぶれたおまんじゅうのような形",
+                    "イラストでよく描かれる、上がとがったしずく型",
+                    "まったくゆがみのない完全なまん丸（球体）",
+                    "サイコロのような四角い立方体"
+                ],
+                answerIndex: 0,
+                explanation: "大きな雨のつぶは、落ちていくときの<ruby>空気<rt>くうき</rt></ruby>の抵抗（影響）で下の方が平らにつぶれた形になっています。"
+            },
+            {
+                id: "sci_2_8",
+                round: "ROUND_2",
+                roundLabel: "第2回",
+                unit: "<ruby>空<rt>そら</rt></ruby>に<ruby>見<rt>み</rt></ruby>える<ruby>水<rt>みず</rt></ruby>",
+                category: "<ruby>虹<rt>にじ</rt></ruby>とは？",
+                isSeason: false,
+                question: "雨上がりに空に「<ruby>虹<rt>にじ</rt></ruby>」が見えるとき、<ruby>空気中<rt>くうきちゅう</rt></ruby>にただよう水のつぶはどのような役割をしているでしょう？",
+                choices: [
+                    "<ruby>太陽<rt>たいよう</rt></ruby>の光を7色に分ける「プリズム」のかわり",
+                    "<ruby>太陽<rt>たいよう</rt></ruby>の熱をすいこむ「黒板」のかわり",
+                    "夜空の星をうつす「望遠鏡」のかわり",
+                    "電気をためる「電池」のかわり"
+                ],
+                answerIndex: 0,
+                explanation: "空気中にただよう水のつぶがプリズムのかわりをして太陽の光を分けるため、虹が見えます。<ruby>滝<rt>たき</rt></ruby>の近くや、飛行機の上から円形の虹が見えることもあります。"
+            },
+            {
+                id: "sci_2_9",
+                round: "ROUND_2",
+                roundLabel: "第2回",
+                unit: "<ruby>空<rt>そら</rt></ruby>に<ruby>見<rt>み</rt></ruby>える<ruby>水<rt>みず</rt></ruby>",
+                category: "<ruby>雨<rt>あめ</rt></ruby>のつく<ruby>漢字<rt>かんじ</rt></ruby>",
+                isSeason: false,
+                question: "空から降ってくる氷のかたまりのうち、直径5mm未満のものを「<ruby>霰<rt>あられ</rt></ruby>」、直径5mm以上の大きな氷のかたまりを何というでしょう？",
+                choices: [
+                    "<ruby>雹<rt>ひょう</rt></ruby>",
+                    "<ruby>霙<rt>みぞれ</rt></ruby>",
+                    "<ruby>霧<rt>きり</rt></ruby>",
+                    "<ruby>霞<rt>かすみ</rt></ruby>"
+                ],
+                answerIndex: 0,
+                explanation: "直径5mm未満の氷のかたまりが「<ruby>霰<rt>あられ</rt></ruby>」、直径5mm以上の氷のかたまりが「<ruby>雹<rt>ひょう</rt></ruby>」、空から降ってくる雨がまじった雪が「<ruby>霙<rt>みぞれ</rt></ruby>」です。"
+            },
+            {
+                id: "sci_2_10",
+                round: "ROUND_2",
+                roundLabel: "第2回",
+                unit: "<ruby>空<rt>そら</rt></ruby>に<ruby>見<rt>み</rt></ruby>える<ruby>水<rt>みず</rt></ruby>",
+                category: "<ruby>季節<rt>きせつ</rt></ruby>の<ruby>移<rt>うつ</rt></ruby>り<ruby>変<rt>か</rt></ruby>わり",
+                isSeason: true,
+                question: "テキストの「<ruby>季節<rt>きせつ</rt></ruby>の<ruby>移<rt>うつ</rt></ruby>り<ruby>変<rt>か</rt></ruby>わり」で紹介されている「<ruby>秋<rt>あき</rt></ruby>の<ruby>代表的<rt>だいひょうてき</rt></ruby>な<ruby>花<rt>はな</rt></ruby>」4つの正しい組み合わせはどれでしょう？",
+                choices: [
+                    "キク・ヒガンバナ・キキョウ・キンモクセイ",
+                    "サクラ・タンポポ・チューリップ・ナノハナ",
+                    "ヒマワリ・アサガオ・アジサイ・ハス",
+                    "ウメ・ツバキ・スイセン・フクジュソウ"
+                ],
+                answerIndex: 0,
+                explanation: "キク・ヒガンバナ・キキョウ・キンモクセイは「<ruby>秋<rt>あき</rt></ruby>の<ruby>代表的<rt>だいひょうてき</rt></ruby>な<ruby>花<rt>はな</rt></ruby>」です。"
+            },
+            {
+                id: "sci_2_11",
+                round: "ROUND_2",
+                roundLabel: "第2回",
+                unit: "<ruby>空<rt>そら</rt></ruby>に<ruby>見<rt>み</rt></ruby>える<ruby>水<rt>みず</rt></ruby>",
+                category: "<ruby>季節<rt>きせつ</rt></ruby>の<ruby>移<rt>うつ</rt></ruby>り<ruby>変<rt>か</rt></ruby>わり",
+                isSeason: true,
+                question: "秋に<ruby>野原<rt>のはら</rt></ruby>に<ruby>咲<rt>さ</rt></ruby>く「<ruby>外国<rt>がいこく</rt></ruby>からきた<ruby>花<rt>はな</rt></ruby>」としてテキストで紹介されている2つの花は何でしょう？",
+                choices: [
+                    "コスモス・セイタカアワダチソウ",
+                    "キキョウ・ヒガンバナ",
+                    "サクラソウ・スミレ",
+                    "レンゲソウ・カタクリ"
+                ],
+                answerIndex: 0,
+                explanation: "コスモスとセイタカアワダチソウは秋に野原に咲く外国からきた花です。"
+            },
+            {
+                id: "sci_2_12",
+                round: "ROUND_2",
+                roundLabel: "第2回",
+                unit: "<ruby>空<rt>そら</rt></ruby>に<ruby>見<rt>み</rt></ruby>える<ruby>水<rt>みず</rt></ruby>",
+                category: "<ruby>雪<rt>ゆき</rt></ruby>の<ruby>結晶<rt>けっしょう</rt></ruby>",
+                isSeason: false,
+                question: "空で氷のつぶが成長して落ちてきた「<ruby>雪<rt>ゆき</rt></ruby>の<ruby>結晶<rt>けっしょう</rt></ruby>」は、基本的に何角形の形をしているでしょう？",
+                choices: [
+                    "六角形",
+                    "三角形",
+                    "四角形",
+                    "五角形"
+                ],
+                answerIndex: 0,
+                explanation: "雪の結晶は気温や水蒸気の量によってさまざまな模様になりますが、基本は「六角形」をしています。"
+            },
+            {
+                id: "sci_2_13",
+                round: "ROUND_2",
+                roundLabel: "第2回",
+                unit: "<ruby>空<rt>そら</rt></ruby>に<ruby>見<rt>み</rt></ruby>える<ruby>水<rt>みず</rt></ruby>",
+                category: "<ruby>気温<rt>きおん</rt></ruby>と<ruby>雪<rt>ゆき</rt></ruby>",
+                isSeason: false,
+                question: "地面の気温が0℃より少し高い3℃くらいの日でも、<ruby>雪<rt>ゆき</rt></ruby>が降ることがあるのはなぜでしょう？",
+                choices: [
+                    "<ruby>上空<rt>じょうくう</rt></ruby>の気温が0℃よりずっと低く、とけきる前に地面に届くから",
+                    "雪は50℃くらいにならないととけない物質だから",
+                    "地面付近だけ特別に冷蔵庫のように冷えているから",
+                    "太陽の光が雪を凍らせるから"
+                ],
+                answerIndex: 0,
+                explanation: "雲のある上空は0℃以下で氷（雪）ができ、地面付近の空気が乾燥していて冷たいと、とけきる前に雪のまま地面に届きます。"
+            },
+            {
+                id: "sci_2_14",
+                round: "ROUND_2",
+                roundLabel: "第2回",
+                unit: "<ruby>空<rt>そら</rt></ruby>に<ruby>見<rt>み</rt></ruby>える<ruby>水<rt>みず</rt></ruby>",
+                category: "<ruby>雲<rt>くも</rt></ruby>の<ruby>名前<rt>なまえ</rt></ruby>",
+                isSeason: false,
+                question: "青空にうかぶ、底が平らでモクモクとした「わた<ruby>雲<rt>ぐも</rt></ruby>」の正式な名前は何でしょう？",
+                choices: [
+                    "<ruby>積雲<rt>せきうん</rt></ruby>",
+                    "<ruby>層雲<rt>そううん</rt></ruby>",
+                    "<ruby>巻雲<rt>けんうん</rt></ruby>",
+                    "<ruby>乱層雲<rt>らんそううん</rt></ruby>"
+                ],
+                answerIndex: 0,
+                explanation: "わた雲は「<ruby>積雲<rt>せきうん</rt></ruby>」、きり雲は「<ruby>層雲<rt>そううん</rt></ruby>」、くもり雲は「<ruby>層積雲<rt>そうせきうん</rt></ruby>」とよばれます。"
+            },
+            {
+                id: "sci_2_15",
+                round: "ROUND_2",
+                roundLabel: "第2回",
+                unit: "<ruby>空<rt>そら</rt></ruby>に<ruby>見<rt>み</rt></ruby>える<ruby>水<rt>みず</rt></ruby>",
+                category: "<ruby>雲<rt>くも</rt></ruby>の<ruby>名前<rt>なまえ</rt></ruby>",
+                isSeason: false,
+                question: "秋の空によく見られる「うろこ<ruby>雲<rt>ぐも</rt></ruby>（いわし<ruby>雲<rt>ぐも</rt></ruby>・さば<ruby>雲<rt>ぐも</rt></ruby>）」と「ひつじ<ruby>雲<rt>ぐも</rt></ruby>」の正式な名前の組み合わせはどれでしょう？",
+                choices: [
+                    "<ruby>巻積雲<rt>けんせきうん</rt></ruby>（うろこ雲） ／ <ruby>高積雲<rt>こうせきうん</rt></ruby>（ひつじ雲）",
+                    "<ruby>積乱雲<rt>せきらんうん</rt></ruby>（うろこ雲） ／ <ruby>乱層雲<rt>らんそううん</rt></ruby>（ひつじ雲）",
+                    "<ruby>層雲<rt>そううん</rt></ruby>（うろこ雲） ／ <ruby>積雲<rt>せきうん</rt></ruby>（ひつじ雲）",
+                    "<ruby>巻雲<rt>けんうん</rt></ruby>（うろこ雲） ／ <ruby>層積雲<rt>そうせきうん</rt></ruby>（ひつじ雲）"
+                ],
+                answerIndex: 0,
+                explanation: "高い空にできる小さなつぶの「うろこ雲」は<ruby>巻積雲<rt>けんせきうん</rt></ruby>、それより低い中層にできる少し大きめの「ひつじ雲」は<ruby>高積雲<rt>こうせきうん</rt></ruby>です。"
+            },
+            {
+                id: "sci_2_16",
+                round: "ROUND_2",
+                roundLabel: "第2回",
+                unit: "<ruby>空<rt>そら</rt></ruby>に<ruby>見<rt>み</rt></ruby>える<ruby>水<rt>みず</rt></ruby>",
+                category: "<ruby>雨<rt>あめ</rt></ruby>のつく<ruby>漢字<rt>かんじ</rt></ruby>",
+                isSeason: false,
+                question: "空から降ってくる、雨がまじった雪のことを表す「雨かんむり」の漢字はどれでしょう？",
+                choices: [
+                    "<ruby>霙<rt>みぞれ</rt></ruby>",
+                    "<ruby>霰<rt>あられ</rt></ruby>",
+                    "<ruby>雹<rt>ひょう</rt></ruby>",
+                    "<ruby>霜<rt>しも</rt></ruby>"
+                ],
+                answerIndex: 0,
+                explanation: "雨がまじった雪は「<ruby>霙<rt>みぞれ</rt></ruby>」と書きます。"
+            },
+            {
+                id: "sci_2_17",
+                round: "ROUND_2",
+                roundLabel: "第2回",
+                unit: "<ruby>空<rt>そら</rt></ruby>に<ruby>見<rt>み</rt></ruby>える<ruby>水<rt>みず</rt></ruby>",
+                category: "<ruby>曇<rt>くも</rt></ruby>りと<ruby>晴<rt>は</rt></ruby>れ",
+                isSeason: false,
+                question: "天気予報で「<ruby>晴<rt>は</rt></ruby>れ」と「<ruby>曇<rt>くも</rt></ruby>り」を決める基準として正しいものはどれでしょう？",
+                choices: [
+                    "<ruby>空全体<rt>そらぜんたい</rt></ruby>を10としたとき、<ruby>雲<rt>くも</rt></ruby>の量が8以下なら晴れ、9以上なら曇り",
+                    "太陽が1秒でも見えれば晴れ、まったく見えなければ曇り",
+                    "白い雲なら晴れ、グレーの雲ならすべて曇り",
+                    "気温が20℃以上なら晴れ、20℃未満なら曇り"
+                ],
+                answerIndex: 0,
+                explanation: "空全体を10としたときの雲の量（雲量）が0〜1が快晴、2〜8が晴れ、9〜10が曇りと決められています。"
+            },
+            {
+                id: "sci_2_18",
+                round: "ROUND_2",
+                roundLabel: "第2回",
+                unit: "<ruby>空<rt>そら</rt></ruby>に<ruby>見<rt>み</rt></ruby>える<ruby>水<rt>みず</rt></ruby>",
+                category: "<ruby>雲<rt>くも</rt></ruby>の<ruby>種類<rt>しゅるい</rt></ruby>",
+                isSeason: false,
+                question: "十種雲形のうち、名前の中に「<ruby>層<rt>そう</rt></ruby>」の字がつく雲（<ruby>巻層雲<rt>けんそううん</rt></ruby>・<ruby>高層雲<rt>こうそううん</rt></ruby>・<ruby>乱層雲<rt>らんそううん</rt></ruby>・<ruby>層雲<rt>そううん</rt></ruby>）に共通する見た目の特徴はどれでしょう？",
+                choices: [
+                    "空全体に<ruby>ベール<rt>ベール</rt></ruby>のように平らに広がる",
+                    "モクモクと縦に高くもり上がる",
+                    "小さな丸いつぶつぶがたくさんならぶ",
+                    "すべて地面に接して発生する"
+                ],
+                answerIndex: 0,
+                explanation: "「層」がつく雲は平らに層のように広がる特徴があり、「積」がつく雲はモクモクと積み重なるように発達する特徴があります。"
+            },
+            {
+                id: "sci_2_19",
+                round: "ROUND_2",
+                roundLabel: "第2回",
+                unit: "<ruby>空<rt>そら</rt></ruby>に<ruby>見<rt>み</rt></ruby>える<ruby>水<rt>みず</rt></ruby>",
+                category: "<ruby>季節<rt>きせつ</rt></ruby>の<ruby>花<rt>はな</rt></ruby>",
+                isSeason: true,
+                question: "オレンジ色の小さな花をたくさん咲かせ、秋になるととてもよい香りをただよわせる「秋を代表する花」はどれでしょう？",
+                choices: [
+                    "キンモクセイ",
+                    "ヒガンバナ",
+                    "キキョウ",
+                    "コスモス"
+                ],
+                answerIndex: 0,
+                explanation: "キンモクセイは秋になるとオレンジ色の小さな花を咲かせ、甘いよい香りを放ちます。"
+            },
+            {
+                id: "sci_2_20",
+                round: "ROUND_2",
+                roundLabel: "第2回",
+                unit: "<ruby>空<rt>そら</rt></ruby>に<ruby>見<rt>み</rt></ruby>える<ruby>水<rt>みず</rt></ruby>",
+                category: "<ruby>水<rt>みず</rt></ruby>の<ruby>変化<rt>へんか</rt></ruby>",
+                isSeason: false,
+                question: "<ruby>雨<rt>あめ</rt></ruby>のつく漢字である「<ruby>霧<rt>きり</rt></ruby>」「<ruby>露<rt>つゆ</rt></ruby>」「<ruby>霜<rt>しも</rt></ruby>」は、すべてどのようなものを表す言葉でしょう？",
+                choices: [
+                    "<ruby>空気中<rt>くうきちゅう</rt></ruby>の<ruby>水蒸気<rt>すいじょうき</rt></ruby>が冷やされてできた<ruby>水<rt>みず</rt></ruby>や<ruby>氷<rt>こおり</rt></ruby>",
+                    "地面の下からわき出てくる温泉の成分",
+                    "太陽から地球に届く光の種類",
+                    "海の底で発生する地震の波"
+                ],
+                answerIndex: 0,
+                explanation: "雨かんむりの漢字の多くは、<ruby>空気中<rt>くうきちゅう</rt></ruby>の水蒸気が冷えてできた水や氷など、空や自然に見える水を表しています。"
+            },
+
+            // ==========================================
+            // 第3回：食塩と砂糖（20問）p.9〜p.12
+            // ==========================================
+            {
+                id: "sci_3_1",
+                round: "ROUND_3",
+                roundLabel: "第3回",
+                unit: "<ruby>食塩<rt>しょくえん</rt></ruby>と<ruby>砂糖<rt>さとう</rt></ruby>",
+                category: "<ruby>結晶<rt>けっしょう</rt></ruby>の形",
+                isSeason: false,
+                question: "<ruby>食塩<rt>しょくえん</rt></ruby>や<ruby>砂糖<rt>さとう</rt></ruby>を水にたくさんとかして温度を下げると取り出せる、規則正しい形をした固体のかたまりを何というでしょう？",
+                choices: [
+                    "<ruby>結晶<rt>けっしょう</rt></ruby>",
+                    "<ruby>水溶液<rt>すいようえき</rt></ruby>",
+                    "カラメル",
+                    "<ruby>気泡<rt>きほう</rt></ruby>"
+                ],
+                answerIndex: 0,
+                explanation: "規則正しい形をしたかたまりを「<ruby>結晶<rt>けっしょう</rt></ruby>」といい、<ruby>食塩<rt>しょくえん</rt></ruby>の結晶はサイコロのような「<ruby>立方体<rt>りっぽうたい</rt></ruby>」の形をしています。"
+            },
+            {
+                id: "sci_3_2",
+                round: "ROUND_3",
+                roundLabel: "第3回",
+                unit: "<ruby>食塩<rt>しょくえん</rt></ruby>と<ruby>砂糖<rt>さとう</rt></ruby>",
+                category: "<ruby>五感<rt>ごかん</rt></ruby>でのちがい",
+                isSeason: false,
+                question: "純粋な<ruby>食塩<rt>しょくえん</rt></ruby>と<ruby>砂糖<rt>さとう</rt></ruby>（および食塩水と砂糖水）の「におい」について正しいものはどれでしょう？",
+                choices: [
+                    "本当はどちらも「においがない」",
+                    "食塩はレモンのにおい、砂糖はバニラのにおいがする",
+                    "食塩は甘いにおい、砂糖はしょっぱいにおいがする",
+                    "どちらも強い刺激臭がある"
+                ],
+                answerIndex: 0,
+                explanation: "食塩も砂糖も、本来は「においがない」物質です。家庭のものでにおいを感じることがあるのは、それ以外の成分がふくまれていることがあるためです。"
+            },
+            {
+                id: "sci_3_3",
+                round: "ROUND_3",
+                roundLabel: "第3回",
+                unit: "<ruby>食塩<rt>しょくえん</rt></ruby>と<ruby>砂糖<rt>さとう</rt></ruby>",
+                category: "<ruby>実験<rt>じっけん</rt></ruby>の<ruby>安全<rt>あんぜん</rt></ruby>",
+                isSeason: false,
+                question: "理科の実験で、<ruby>水溶液<rt>すいようえき</rt></ruby>のにおいをかぐときの正しい方法は何でしょう？",
+                choices: [
+                    "<ruby>手<rt>て</rt></ruby>であおいでかぐ",
+                    "鼻を試験管やビーカーにぴったりつけて思いきりすいこむ",
+                    "少し口にふくんで味を確かめる",
+                    "目をつぶって息を止める"
+                ],
+                answerIndex: 0,
+                explanation: "塩酸やアンモニア水など強い<ruby>刺激臭<rt>しげきしゅう</rt></ruby>がある危険な水溶液もあるため、においをかぐときは必ず「<ruby>手<rt>て</rt></ruby>であおいで」かぎます。"
+            },
+            {
+                id: "sci_3_4",
+                round: "ROUND_3",
+                roundLabel: "第3回",
+                unit: "<ruby>食塩<rt>しょくえん</rt></ruby>と<ruby>砂糖<rt>さとう</rt></ruby>",
+                category: "<ruby>水溶液<rt>すいようえき</rt></ruby>の<ruby>性質<rt>せいしつ</rt></ruby>",
+                isSeason: false,
+                question: "<ruby>食塩水<rt>しょくえんすい</rt></ruby>と<ruby>砂糖水<rt>さとうみず</rt></ruby>に「ムラサキキャベツ<ruby>液<rt>えき</rt></ruby>」を加えると、どちらも何色に変わるでしょう？",
+                choices: [
+                    "<ruby>紫<rt>むらさき</rt></ruby>（<ruby>中性<rt>ちゅうせい</rt></ruby>だから）",
+                    "<ruby>赤<rt>あか</rt></ruby>（<ruby>酸性<rt>さんせい</rt></ruby>だから）",
+                    "<ruby>黄色<rt>きいろ</rt></ruby>（<ruby>アルカリ性<rt>アルカリせい</rt></ruby>だから）",
+                    "<ruby>無色透明<rt>むしょくとうめい</rt></ruby>"
+                ],
+                answerIndex: 0,
+                explanation: "<ruby>食塩水<rt>しょくえんすい</rt></ruby>も<ruby>砂糖水<rt>さとうみず</rt></ruby>も「<ruby>中性<rt>ちゅうせい</rt></ruby>」なので、ムラサキキャベツ液を加えるとどちらも「<ruby>紫<rt>むらさき</rt></ruby>」になります。"
+            },
+            {
+                id: "sci_3_5",
+                round: "ROUND_3",
+                roundLabel: "第3回",
+                unit: "<ruby>食塩<rt>しょくえん</rt></ruby>と<ruby>砂糖<rt>さとう</rt></ruby>",
+                category: "<ruby>水<rt>みず</rt></ruby>にとける<ruby>量<rt>りょう</rt></ruby>",
+                isSeason: false,
+                question: "同じ温度・同じ量の水にとける<ruby>量<rt>りょう</rt></ruby>と、水の温度を上げたときの変化について正しいものはどれでしょう？",
+                choices: [
+                    "<ruby>砂糖<rt>さとう</rt></ruby>の方が多くとけ、水の温度を上げると<ruby>砂糖<rt>さとう</rt></ruby>はとける量が大きく増えるが、<ruby>食塩<rt>しょくえん</rt></ruby>はあまり増えない",
+                    "<ruby>食塩<rt>しょくえん</rt></ruby>の方が多くとけ、水の温度を上げると<ruby>食塩<rt>しょくえん</rt></ruby>はとける量が大きく増える",
+                    "<ruby>食塩<rt>しょくえん</rt></ruby>も<ruby>砂糖<rt>さとう</rt></ruby>も、とける量はまったく同じである",
+                    "水の温度を上げると、<ruby>食塩<rt>しょくえん</rt></ruby>も<ruby>砂糖<rt>さとう</rt></ruby>もとける量がへってしまう"
+                ],
+                answerIndex: 0,
+                explanation: "水には食塩より<ruby>砂糖<rt>さとう</rt></ruby>の方がずっと多くとけます。また、温度を上げると<ruby>砂糖<rt>さとう</rt></ruby>のとける量は大きく増えますが、<ruby>食塩<rt>しょくえん</rt></ruby>はあまり増えません。"
+            },
+            {
+                id: "sci_3_6",
+                round: "ROUND_3",
+                roundLabel: "第3回",
+                unit: "<ruby>食塩<rt>しょくえん</rt></ruby>と<ruby>砂糖<rt>さとう</rt></ruby>",
+                category: "<ruby>泥水<rt>どろみず</rt></ruby>と<ruby>食塩<rt>しょくえん</rt></ruby>",
+                isSeason: false,
+                question: "にごった「<ruby>泥水<rt>どろみず</rt></ruby>」に<ruby>食塩<rt>しょくえん</rt></ruby>を加えると泥がすぐに下の方にたまります。この性質によって、川が海に流れこむ<ruby>河口<rt>かこう</rt></ruby>付近に泥や砂が積もってできる地形は何でしょう？",
+                choices: [
+                    "<ruby>三角州<rt>さんかくす</rt></ruby>",
+                    "<ruby>扇状地<rt>せんじょうち</rt></ruby>",
+                    "カルデラ",
+                    "<ruby>断崖絶壁<rt>だんがいぜっぺき</rt></ruby>"
+                ],
+                answerIndex: 0,
+                explanation: "川の水に海水（塩分）が加わることで泥や砂が積もりやすくなり、<ruby>河口<rt>かこう</rt></ruby>付近に「<ruby>三角州<rt>さんかくす</rt></ruby>」という地形ができます。"
+            },
+            {
+                id: "sci_3_7",
+                round: "ROUND_3",
+                roundLabel: "第3回",
+                unit: "<ruby>食塩<rt>しょくえん</rt></ruby>と<ruby>砂糖<rt>さとう</rt></ruby>",
+                category: "<ruby>加熱<rt>かねつ</rt></ruby>の<ruby>実験<rt>じっけん</rt></ruby>",
+                isSeason: false,
+                question: "<ruby>食塩水<rt>しょくえんすい</rt></ruby>と<ruby>砂糖水<rt>さとうみず</rt></ruby>をそれぞれスプーンにとって<ruby>加熱<rt>かねつ</rt></ruby>し、水を<ruby>蒸発<rt>じょうはつ</rt></ruby>させていくとどのような違いが出るでしょう？",
+                choices: [
+                    "<ruby>食塩水<rt>しょくえんすい</rt></ruby>は白い固体が残り、<ruby>砂糖水<rt>さとうみず</rt></ruby>はこげて<ruby>炭<rt>すみ</rt></ruby>になり黒い固体が残る",
+                    "<ruby>食塩水<rt>しょくえんすい</rt></ruby>は黒い固体が残り、<ruby>砂糖水<rt>さとうみず</rt></ruby>は白い固体が残る",
+                    "どちらもすべて気体になって何も残らない",
+                    "どちらも青色の液体になる"
+                ],
+                answerIndex: 0,
+                explanation: "<ruby>食塩水<rt>しょくえんすい</rt></ruby>は白い食塩が残り、<ruby>砂糖水<rt>さとうみず</rt></ruby>は砂糖がこげて<ruby>炭<rt>すみ</rt></ruby>になるため黒い固体が残ります。"
+            },
+            {
+                id: "sci_3_8",
+                round: "ROUND_3",
+                roundLabel: "第3回",
+                unit: "<ruby>食塩<rt>しょくえん</rt></ruby>と<ruby>砂糖<rt>さとう</rt></ruby>",
+                category: "カラメル",
+                isSeason: false,
+                question: "<ruby>砂糖<rt>さとう</rt></ruby>などを高い温度で加熱したときに残った黒みがかった茶色の物質で、プリンのソースや醤油・ソースの着色にも用いられるものを何というでしょう？",
+                choices: [
+                    "カラメル",
+                    "パラフィン",
+                    "デンプン",
+                    "グルテン"
+                ],
+                answerIndex: 0,
+                explanation: "砂糖を高い温度で加熱してできる黒みがかった茶色のものを「カラメル」といい、わずかに苦みがあって風味づけや着色に用いられます。"
+            },
+            {
+                id: "sci_3_9",
+                round: "ROUND_3",
+                roundLabel: "第3回",
+                unit: "<ruby>食塩<rt>しょくえん</rt></ruby>と<ruby>砂糖<rt>さとう</rt></ruby>",
+                category: "<ruby>ジャムと砂糖<rt>ジャムとさとう</rt></ruby>",
+                isSeason: false,
+                question: "<ruby>果物<rt>くだもの</rt></ruby>をもとにつくる「ジャム」で、長期の保管にむいているのはどちらでしょう？（ヒント：ナメクジに塩をかけると水分がうばわれてしぼみます）",
+                choices: [
+                    "<ruby>砂糖<rt>さとう</rt></ruby>を多く入れてつくった甘いジャム（水分をうばってカビや細菌をふせぐから）",
+                    "<ruby>砂糖<rt>さとう</rt></ruby>をあまり入れずにつくった甘さひかえめのジャム",
+                    "どちらも冷蔵庫に入れなくても10年間まったくくさらない",
+                    "砂糖が多いほどカビが生えやすくなる"
+                ],
+                answerIndex: 0,
+                explanation: "砂糖を多く入れると、砂糖が水分をしっかりと引きつけてカビや細菌が使える水分をうばうため、くさりにくく長期保存に向いています。"
+            },
+            {
+                id: "sci_3_10",
+                round: "ROUND_3",
+                roundLabel: "第3回",
+                unit: "<ruby>食塩<rt>しょくえん</rt></ruby>と<ruby>砂糖<rt>さとう</rt></ruby>",
+                category: "<ruby>天空の鏡<rt>てんくうのかがみ</rt></ruby>",
+                isSeason: false,
+                question: "南米ボリビアにあり、広さが<ruby>岐阜県<rt>ぎふけん</rt></ruby>と同じくらいで標高差がわずか50cmしかないため、水がたまると水面が空を反射して「<ruby>天空の鏡<rt>てんくうのかがみ</rt></ruby>」とよばれる絶景になる場所はどこでしょう？",
+                choices: [
+                    "ウユニ<ruby>塩湖<rt>えんこ</rt></ruby>",
+                    "<ruby>死海<rt>しかい</rt></ruby>",
+                    "<ruby>琵琶湖<rt>びわこ</rt></ruby>",
+                    "<ruby>湖山池<rt>こやまいけ</rt></ruby>"
+                ],
+                answerIndex: 0,
+                explanation: "ボリビアの「ウユニ<ruby>塩湖<rt>えんこ</rt></ruby>（塩類平原）」は世界で最も平らな場所といわれ、日本のウユニ塩湖とよばれる<ruby>千葉県<rt>ちばけん</rt></ruby>の「<ruby>江川海岸<rt>えがわかいがん</rt></ruby>」も有名です。"
+            },
+            {
+                id: "sci_3_11",
+                round: "ROUND_3",
+                roundLabel: "第3回",
+                unit: "<ruby>食塩<rt>しょくえん</rt></ruby>と<ruby>砂糖<rt>さとう</rt></ruby>",
+                category: "<ruby>季節<rt>きせつ</rt></ruby>の<ruby>移<rt>うつ</rt></ruby>り<ruby>変<rt>か</rt></ruby>わり",
+                isSeason: true,
+                question: "テキストの「<ruby>季節<rt>きせつ</rt></ruby>の<ruby>移<rt>うつ</rt></ruby>り<ruby>変<rt>か</rt></ruby>わり」で紹介されている「<ruby>秋<rt>あき</rt></ruby>になると<ruby>渡<rt>わた</rt></ruby>ってくる<ruby>鳥<rt>とり</rt></ruby>（冬鳥）」4つの正しい組み合わせはどれでしょう？",
+                choices: [
+                    "ハクチョウ・ガン・カモ・ツグミ",
+                    "ツバメ・カッコウ・ホトトギス・オオヨシキリ",
+                    "ウグイス・メジロ・ヒバリ・キジ",
+                    "ペンギン・ダチョウ・フラミンゴ・ペリカン"
+                ],
+                answerIndex: 0,
+                explanation: "ハクチョウ・ガン・カモ・ツグミは、秋になると北の国から日本へ渡ってくる鳥（冬鳥）です。"
+            },
+            {
+                id: "sci_3_12",
+                round: "ROUND_3",
+                roundLabel: "第3回",
+                unit: "<ruby>食塩<rt>しょくえん</rt></ruby>と<ruby>砂糖<rt>さとう</rt></ruby>",
+                category: "<ruby>季節<rt>きせつ</rt></ruby>の<ruby>移<rt>うつ</rt></ruby>り<ruby>変<rt>か</rt></ruby>わり",
+                isSeason: true,
+                question: "秋になると寒い「<ruby>山<rt>やま</rt></ruby>から<ruby>下<rt>お</rt></ruby>りてくる<ruby>鳥<rt>とり</rt></ruby>（漂鳥）」としてテキストで紹介されている2種類の鳥は何でしょう？",
+                choices: [
+                    "ウグイス・メジロ",
+                    "ハクチョウ・ガン",
+                    "カモ・ツグミ",
+                    "ツバメ・スズメ"
+                ],
+                answerIndex: 0,
+                explanation: "ウグイスとメジロは、夏は涼しい山で過ごし、秋になると暖かい平地へ下りてくる鳥です。"
+            },
+            {
+                id: "sci_3_13",
+                round: "ROUND_3",
+                roundLabel: "第3回",
+                unit: "<ruby>食塩<rt>しょくえん</rt></ruby>と<ruby>砂糖<rt>さとう</rt></ruby>",
+                category: "<ruby>手ざわり<rt>てざわり</rt></ruby>のちがい",
+                isSeason: false,
+                question: "<ruby>食塩<rt>しょくえん</rt></ruby>と<ruby>砂糖<rt>さとう</rt></ruby>をお皿に盛って指でさわってみると、どちらの方が「ベタベタ」するでしょう？",
+                choices: [
+                    "<ruby>砂糖<rt>さとう</rt></ruby>（空気中の水分をすいやすいから）",
+                    "<ruby>食塩<rt>しょくえん</rt></ruby>",
+                    "どちらもまったく同じサラサラ感である",
+                    "どちらも氷のように冷たくてかたい"
+                ],
+                answerIndex: 0,
+                explanation: "<ruby>砂糖<rt>さとう</rt></ruby>の方が水と結びつきやすく湿りやすいため、さわるとベタベタします。"
+            },
+            {
+                id: "sci_3_14",
+                round: "ROUND_3",
+                roundLabel: "第3回",
+                unit: "<ruby>食塩<rt>しょくえん</rt></ruby>と<ruby>砂糖<rt>さとう</rt></ruby>",
+                category: "<ruby>五感<rt>ごかん</rt></ruby>の<ruby>種類<rt>しゅるい</rt></ruby>",
+                isSeason: false,
+                question: "食塩と砂糖のちがいを確かめるために使った「<ruby>五感<rt>ごかん</rt></ruby>」の5つとは何でしょう？",
+                choices: [
+                    "<ruby>視覚<rt>しかく</rt></ruby>・<ruby>聴覚<rt>ちょうかく</rt></ruby>・<ruby>嗅覚<rt>きゅうかく</rt></ruby>・<ruby>味覚<rt>みかく</rt></ruby>・<ruby>触覚<rt>しょっかく</rt></ruby>",
+                    "<ruby>重力<rt>じゅうりょく</rt></ruby>・<ruby>磁力<rt>じりょく</rt></ruby>・<ruby>浮力<rt>ふりょく</rt></ruby>・<ruby>摩擦力<rt>まさつりょく</rt></ruby>・<ruby>弾性力<rt>だんせいりょく</rt></ruby>",
+                    "<ruby>酸性<rt>さんせい</rt></ruby>・<ruby>中性<rt>ちゅうせい</rt></ruby>・<ruby>アルカリ性<rt>アルカリせい</rt></ruby>・<ruby>固体<rt>こたい</rt></ruby>・<ruby>液体<rt>えきたい</rt></ruby>",
+                    "<ruby>視覚<rt>しかく</rt></ruby>・<ruby>直感<rt>ちょっかん</rt></ruby>・<ruby>記憶<rt>きおく</rt></ruby>・<ruby>想像<rt>そうぞう</rt></ruby>・<ruby>思考<rt>しこう</rt></ruby>"
+                ],
+                answerIndex: 0,
+                explanation: "見る（視覚）・聞く（聴覚）・かぐ（嗅覚）・味わう（味覚）・さわる（触覚）の5つを「<ruby>五感<rt>ごかん</rt></ruby>」といいます。"
+            },
+            {
+                id: "sci_3_15",
+                round: "ROUND_3",
+                roundLabel: "第3回",
+                unit: "<ruby>食塩<rt>しょくえん</rt></ruby>と<ruby>砂糖<rt>さとう</rt></ruby>",
+                category: "<ruby>一粒<rt>ひとつぶ</rt></ruby>の<ruby>中<rt>なか</rt></ruby>",
+                isSeason: false,
+                question: "私たちが普段「<ruby>一粒<rt>ひとつぶ</rt></ruby>」とよんでいる食塩や砂糖のつぶの中は、どのようになっているでしょう？",
+                choices: [
+                    "無数の目に見えない小さな粒が集まってできている",
+                    "中身は空っぽの風船のようになっている",
+                    "中心に小さな種が入っている",
+                    "1つのつぶが1個の巨大な原子でできている"
+                ],
+                answerIndex: 0,
+                explanation: "一粒の中には無数の目に見えない小さな粒（分子やイオン）が集まっています。"
+            },
+            {
+                id: "sci_3_16",
+                round: "ROUND_3",
+                roundLabel: "第3回",
+                unit: "<ruby>食塩<rt>しょくえん</rt></ruby>と<ruby>砂糖<rt>さとう</rt></ruby>",
+                category: "<ruby>水溶液<rt>すいようえき</rt></ruby>の特徴",
+                isSeason: false,
+                question: "<ruby>食塩水<rt>しょくえんすい</rt></ruby>と<ruby>砂糖水<rt>さとうみず</rt></ruby>のどちらにも当てはまる性質はどれでしょう？",
+                choices: [
+                    "においがなく、<ruby>透明<rt>とうめい</rt></ruby>で、ムラサキキャベツ液を加えると紫になる",
+                    "加熱するとどちらも黒い炭が残る",
+                    "水の温度を上げるとどちらもとける量が2倍以上になる",
+                    "どちらも赤色の液体である"
+                ],
+                answerIndex: 0,
+                explanation: "食塩水も砂糖水もにおいがなく透明な<ruby>中性<rt>ちゅうせい</rt></ruby>の水溶液です。"
+            },
+            {
+                id: "sci_3_17",
+                round: "ROUND_3",
+                roundLabel: "第3回",
+                unit: "<ruby>食塩<rt>しょくえん</rt></ruby>と<ruby>砂糖<rt>さとう</rt></ruby>",
+                category: "<ruby>実験<rt>じっけん</rt></ruby>の<ruby>安全<rt>あんぜん</rt></ruby>",
+                isSeason: false,
+                question: "理科の実験で、正体がわからないものをなめたりさわったりしてはいけないのはなぜでしょう？",
+                choices: [
+                    "毒があったり、皮膚を傷めたりする危険なものがあるから",
+                    "実験道具がよごれて洗うのが大変だから",
+                    "味がなくなってしまうから",
+                    "色が変化しなくなるから"
+                ],
+                answerIndex: 0,
+                explanation: "何が溶けているかわからないものをなめたりさわったりするのは大変危険なので、絶対にやめましょう。"
+            },
+            {
+                id: "sci_3_18",
+                round: "ROUND_3",
+                roundLabel: "第3回",
+                unit: "<ruby>食塩<rt>しょくえん</rt></ruby>と<ruby>砂糖<rt>さとう</rt></ruby>",
+                category: "<ruby>日本<rt>にほん</rt></ruby>のウユニ<ruby>塩湖<rt>えんこ</rt></ruby>",
+                isSeason: false,
+                question: "干潮のときに砂浜にできた水たまりに空や電柱が反射することから「日本のウユニ塩湖」とよばれることがある<ruby>千葉県<rt>ちばけん</rt></ruby>の海岸はどこでしょう？",
+                choices: [
+                    "<ruby>江川海岸<rt>えがわかいがん</rt></ruby>",
+                    "<ruby>九十九里浜<rt>くじゅうくりはま</rt></ruby>",
+                    "<ruby>三保の松原<rt>みほのまつばら</rt></ruby>",
+                    "<ruby>千里浜<rt>ちりはま</rt></ruby>"
+                ],
+                answerIndex: 0,
+                explanation: "<ruby>千葉県<rt>ちばけん</rt></ruby>木更津市の「<ruby>江川海岸<rt>えがわかいがん</rt></ruby>」は日本のウユニ塩湖ともよばれる絶景スポットです。"
+            },
+            {
+                id: "sci_3_19",
+                round: "ROUND_3",
+                roundLabel: "第3回",
+                unit: "<ruby>食塩<rt>しょくえん</rt></ruby>と<ruby>砂糖<rt>さとう</rt></ruby>",
+                category: "<ruby>食塩<rt>しょくえん</rt></ruby>の<ruby>特徴<rt>とくちょう</rt></ruby>",
+                isSeason: false,
+                question: "2つの空の容器にそれぞれ食塩と砂糖を入れて耳元で振ったとき、音がちがうのはなぜでしょう？",
+                choices: [
+                    "<ruby>結晶<rt>けっしょう</rt></ruby>の形や粒のかたさ・大きさがちがうから",
+                    "食塩は磁石にくっつくから",
+                    "砂糖は液体だから",
+                    "食塩の中には空気が入っていないから"
+                ],
+                answerIndex: 0,
+                explanation: "食塩と砂糖は<ruby>結晶<rt>けっしょう</rt></ruby>の形や粒の性質がちがうため、容器に入れて振ったときの音も変わります。"
+            },
+            {
+                id: "sci_3_20",
+                round: "ROUND_3",
+                roundLabel: "第3回",
+                unit: "<ruby>食塩<rt>しょくえん</rt></ruby>と<ruby>砂糖<rt>さとう</rt></ruby>",
+                category: "<ruby>水<rt>みず</rt></ruby>へのとけやすさ",
+                isSeason: false,
+                question: "同じ量の水に食塩と砂糖を同じ量ずつ入れていくと、どちらの方が早く「とけ残り」が生じるでしょう？",
+                choices: [
+                    "<ruby>食塩<rt>しょくえん</rt></ruby>（水にとける限界の量が砂糖より少ないから）",
+                    "<ruby>砂糖<rt>さとう</rt></ruby>",
+                    "どちらもまったく同じ量でとけ残る",
+                    "どちらも無限にとけるのでとけ残らない"
+                ],
+                answerIndex: 0,
+                explanation: "同じ温度・同じ量の水には食塩より砂糖の方が多くとけるため、同じ量ずつ加えていくと「<ruby>食塩<rt>しょくえん</rt></ruby>」の方が早く限界になり、とけ残りが生じます。"
+            },
+
+            // ==========================================
+            // 第4回：ろうそくの燃え方（20問）p.13〜p.16
+            // ==========================================
+            {
+                id: "sci_4_1",
+                round: "ROUND_4",
+                roundLabel: "第4回",
+                unit: "ろうそくの<ruby>燃<rt>も</rt></ruby>え<ruby>方<rt>かた</rt></ruby>",
+                category: "ろうそくの<ruby>材料<rt>ざいりょう</rt></ruby>",
+                isSeason: false,
+                question: "ろうそくは何をねじり合わせた<ruby>芯<rt>しん</rt></ruby>に、何を固めてつくられているでしょう？",
+                choices: [
+                    "<ruby>綿糸<rt>めんし</rt></ruby>やイグサなどの糸 ／ ロウやパラフィンなどの物質",
+                    "銅線や針金 ／ プラスチックやゴム",
+                    "ガラスの管 ／ 砂糖や塩",
+                    "木の枝 ／ 粘土やセメント"
+                ],
+                answerIndex: 0,
+                explanation: "ろうそくは<ruby>綿糸<rt>めんし</rt></ruby>やイグサなどの糸をねじり合わせた「<ruby>芯<rt>しん</rt></ruby>」に、ロウやパラフィンなどを固めてつくります。"
+            },
+            {
+                id: "sci_4_2",
+                round: "ROUND_4",
+                roundLabel: "第4回",
+                unit: "ろうそくの<ruby>燃<rt>も</rt></ruby>え<ruby>方<rt>かた</rt></ruby>",
+                category: "ろうそくの<ruby>燃<rt>も</rt></ruby>え<ruby>方<rt>かた</rt></ruby>",
+                isSeason: false,
+                question: "ろうそくに火をともしたとき、ロウはどのような状態に変化して燃えているでしょう？",
+                choices: [
+                    "<ruby>固体<rt>こたい</rt></ruby>のロウがとけて<ruby>液体<rt>えきたい</rt></ruby>になり、<ruby>芯<rt>しん</rt></ruby>をのぼって<ruby>気体<rt>きたい</rt></ruby>になって燃える",
+                    "<ruby>固体<rt>こたい</rt></ruby>のロウがとけずにそのまま直接燃える",
+                    "<ruby>糸<rt>いと</rt></ruby>（<ruby>芯<rt>しん</rt></ruby>）だけが燃えていて、ロウはまったく燃えていない",
+                    "<ruby>液体<rt>えきたい</rt></ruby>のロウが水になって消える"
+                ],
+                answerIndex: 0,
+                explanation: "炎の熱で固体が「<ruby>液体<rt>えきたい</rt></ruby>」になり、芯をのぼってさらにあたためられ「<ruby>気体<rt>きたい</rt></ruby>」になって燃えています。強く息をふきかけると消えるのは、燃えていた気体のロウが飛ばされるためです。"
+            },
+            {
+                id: "sci_4_3",
+                round: "ROUND_4",
+                roundLabel: "第4回",
+                unit: "ろうそくの<ruby>燃<rt>も</rt></ruby>え<ruby>方<rt>かた</rt></ruby>",
+                category: "ロウソクの<ruby>科学<rt>かがく</rt></ruby>",
+                isSeason: false,
+                question: "少年・少女のためのクリスマス講演をまとめた名著『ロウソクの<ruby>科学<rt>かがく</rt></ruby>』で知られる、イギリスの化学者・物理学者はだれでしょう？",
+                choices: [
+                    "マイケル・ファラデー",
+                    "アイザック・ニュートン",
+                    "トーマス・エジソン",
+                    "チャールズ・ダーウィン"
+                ],
+                answerIndex: 0,
+                explanation: "イギリスの科学者「マイケル・ファラデー」が行った講演をまとめた『ロウソクの<ruby>科学<rt>かがく</rt></ruby>』は、1861年の発刊以来世界中で読まれています。"
+            },
+            {
+                id: "sci_4_4",
+                round: "ROUND_4",
+                roundLabel: "第4回",
+                unit: "ろうそくの<ruby>燃<rt>も</rt></ruby>え<ruby>方<rt>かた</rt></ruby>",
+                category: "<ruby>燃焼<rt>ねんしょう</rt></ruby>の3<ruby>条件<rt>じょうけん</rt></ruby>",
+                isSeason: false,
+                question: "ものが燃えるために必要な「3つの<ruby>条件<rt>じょうけん</rt></ruby>」の正しい組み合わせはどれでしょう？",
+                choices: [
+                    "<ruby>燃<rt>も</rt></ruby>えるものがあること・<ruby>酸素<rt>さんそ</rt></ruby>があること・<ruby>発火点<rt>はっかてん</rt></ruby>以上の温度になること",
+                    "水があること・風があること・暗い場所であること",
+                    "二酸化炭素があること・金属があること・0℃以下になること",
+                    "電気があること・磁石があること・空気をなくすこと"
+                ],
+                answerIndex: 0,
+                explanation: "ものが燃えるには、①燃えるものがあること、②<ruby>酸素<rt>さんそ</rt></ruby>があること、③ある温度（<ruby>発火点<rt>はっかてん</rt></ruby>）以上になること、の3つの条件がそろう必要があります。"
+            },
+            {
+                id: "sci_4_5",
+                round: "ROUND_4",
+                roundLabel: "第4回",
+                unit: "ろうそくの<ruby>燃<rt>も</rt></ruby>え<ruby>方<rt>かた</rt></ruby>",
+                category: "ろうそくの<ruby>炎<rt>ほのお</rt></ruby>",
+                isSeason: false,
+                question: "ろうそくの炎の3つの部分（<ruby>外炎<rt>がいえん</rt></ruby>・<ruby>内炎<rt>ないえん</rt></ruby>・<ruby>炎心<rt>えんしん</rt></ruby>）のうち、<ruby>酸素<rt>さんそ</rt></ruby>が十分にあるためよく燃え、「最も<ruby>温度<rt>おんど</rt></ruby>が高い」部分はどれでしょう？",
+                choices: [
+                    "<ruby>外炎<rt>がいえん</rt></ruby>（一番外側の部分）",
+                    "<ruby>内炎<rt>ないえん</rt></ruby>（真ん中の明るい部分）",
+                    "<ruby>炎心<rt>えんしん</rt></ruby>（芯のまわりの暗い部分）",
+                    "どの部分もすべて同じ温度"
+                ],
+                answerIndex: 0,
+                explanation: "<ruby>外炎<rt>がいえん</rt></ruby>は空気にふれて酸素が十分にあるため完全燃焼し、最も温度が高くなります。"
+            },
+            {
+                id: "sci_4_6",
+                round: "ROUND_4",
+                roundLabel: "第4回",
+                unit: "ろうそくの<ruby>燃<rt>も</rt></ruby>え<ruby>方<rt>かた</rt></ruby>",
+                category: "ろうそくの<ruby>炎<rt>ほのお</rt></ruby>",
+                isSeason: false,
+                question: "ろうそくの炎のうち、酸素が十分ではないため不完全燃焼をしており、<ruby>炭素<rt>たんそ</rt></ruby>のつぶが高温で輝くために「最も<ruby>明<rt>あか</rt></ruby>るい」部分はどれでしょう？",
+                choices: [
+                    "<ruby>内炎<rt>ないえん</rt></ruby>",
+                    "<ruby>外炎<rt>がいえん</rt></ruby>",
+                    "<ruby>炎心<rt>えんしん</rt></ruby>",
+                    "ろうそくの底"
+                ],
+                answerIndex: 0,
+                explanation: "<ruby>内炎<rt>ないえん</rt></ruby>は中にふくまれる<ruby>炭素<rt>たんそ</rt></ruby>という物質のつぶが高温で輝くため、最も明るく見えます。"
+            },
+            {
+                id: "sci_4_7",
+                round: "ROUND_4",
+                roundLabel: "第4回",
+                unit: "ろうそくの<ruby>燃<rt>も</rt></ruby>え<ruby>方<rt>かた</rt></ruby>",
+                category: "ろうそくの<ruby>炎<rt>ほのお</rt></ruby>",
+                isSeason: false,
+                question: "ろうそくの炎のうち、気体のロウがほとんど燃えていない部分で、「最も<ruby>温度<rt>おんど</rt></ruby>が低く、最も<ruby>暗<rt>くら</rt></ruby>い」部分はどれでしょう？",
+                choices: [
+                    "<ruby>炎心<rt>えんしん</rt></ruby>",
+                    "<ruby>外炎<rt>がいえん</rt></ruby>",
+                    "<ruby>内炎<rt>ないえん</rt></ruby>",
+                    "炎の先端"
+                ],
+                answerIndex: 0,
+                explanation: "芯のすぐまわりの「<ruby>炎心<rt>えんしん</rt></ruby>」は、気体のロウがほとんど燃えていないため最も温度が低く、暗く見えます。"
+            },
+            {
+                id: "sci_4_8",
+                round: "ROUND_4",
+                roundLabel: "第4回",
+                unit: "ろうそくの<ruby>燃<rt>も</rt></ruby>え<ruby>方<rt>かた</rt></ruby>",
+                category: "<ruby>丸<rt>まる</rt></ruby>い<ruby>炎<rt>ほのお</rt></ruby>",
+                isSeason: false,
+                question: "地上では細長く上にのびるろうそくの炎が、<ruby>無重力空間<rt>むじゅうりょくくうかん</rt></ruby>（宇宙船内）で燃やすと「<ruby>丸<rt>まる</rt></ruby>い形」になるのはなぜでしょう？",
+                choices: [
+                    "あたためられた空気が軽くなって<ruby>上昇<rt>じょうしょう</rt></ruby>する流れがほとんど起きないから",
+                    "宇宙船の中には酸素がまったくないから",
+                    "宇宙ではロウが氷のようにかたくなるから",
+                    "宇宙船の窓が丸い形をしているから"
+                ],
+                answerIndex: 0,
+                explanation: "地上では熱であたためられた空気が軽くなって上昇するため炎が縦長になりますが、無重力空間では上昇気流が起きないため丸い炎になります。"
+            },
+            {
+                id: "sci_4_9",
+                round: "ROUND_4",
+                roundLabel: "第4回",
+                unit: "ろうそくの<ruby>燃<rt>も</rt></ruby>え<ruby>方<rt>かた</rt></ruby>",
+                category: "ホタルの<ruby>光<rt>ひかり</rt></ruby>",
+                isSeason: false,
+                question: "ろうそくの明るさはホタル約20匹分といわれます。ホタルの光は電気の光とちがって熱をほとんど出さないため、何とよばれるでしょう？",
+                choices: [
+                    "<ruby>冷光<rt>れいこう</rt></ruby>",
+                    "<ruby>熱光<rt>ねっこう</rt></ruby>",
+                    "<ruby>太陽光<rt>たいようこう</rt></ruby>",
+                    "<ruby>蛍光<rt>けいこう</rt></ruby>"
+                ],
+                answerIndex: 0,
+                explanation: "ホタルの光は熱をほとんど出さないため「<ruby>冷光<rt>れいこう</rt></ruby>」とよばれます。ホタルは成虫だけでなく、幼虫も発光します。"
+            },
+            {
+                id: "sci_4_10",
+                round: "ROUND_4",
+                roundLabel: "第4回",
+                unit: "ろうそくの<ruby>燃<rt>も</rt></ruby>え<ruby>方<rt>かた</rt></ruby>",
+                category: "ローソク<ruby>岩<rt>いわ</rt></ruby>",
+                isSeason: false,
+                question: "島全体が石でできており、その変わった形から<ruby>積丹半島<rt>しゃこたんはんとう</rt></ruby>の名物になっている「ローソク<ruby>岩<rt>いわ</rt></ruby>」がある都道府県はどこでしょう？",
+                choices: [
+                    "<ruby>北海道<rt>ほっかいどう</rt></ruby>",
+                    "<ruby>沖縄県<rt>おきなわけん</rt></ruby>",
+                    "<ruby>福井県<rt>ふくいけん</rt></ruby>",
+                    "<ruby>長崎県<rt>ながさきけん</rt></ruby>"
+                ],
+                answerIndex: 0,
+                explanation: "<ruby>北海道<rt>ほっかいどう</rt></ruby>の<ruby>積丹半島<rt>しゃこたんはんとう</rt></ruby>沖にある無人島「ローソク岩」が有名です。"
+            },
+            {
+                id: "sci_4_11",
+                round: "ROUND_4",
+                roundLabel: "第4回",
+                unit: "ろうそくの<ruby>燃<rt>も</rt></ruby>え<ruby>方<rt>かた</rt></ruby>",
+                category: "<ruby>考えてみよう<rt>かんがえてみよう</rt></ruby>",
+                isSeason: false,
+                question: "2本の同じろうそくの底をつなぎ合わせて針金を通し、少し傾けた状態で両端に同時に火をつけると、ろうそくはどのように動くでしょう？",
+                choices: [
+                    "ロウがとけて落ちるたびに軽くなる方が入れかわり、シーソーのようにゆれる",
+                    "まったく動かず、ずっと同じ角度で止まったままになる",
+                    "ぐるぐるとプロペラのように高速回転する",
+                    "1秒で同時に火が消えてしまう"
+                ],
+                answerIndex: 0,
+                explanation: "下がっている方のロウが早く溶けて落ちて軽くなるため、反対側が下がり、シーソーのように交互に上下にゆれ続けます。"
+            },
+            {
+                id: "sci_4_12",
+                round: "ROUND_4",
+                roundLabel: "第4回",
+                unit: "ろうそくの<ruby>燃<rt>も</rt></ruby>え<ruby>方<rt>かた</rt></ruby>",
+                category: "<ruby>季節<rt>きせつ</rt></ruby>の<ruby>移<rt>うつ</rt></ruby>り<ruby>変<rt>か</rt></ruby>わり",
+                isSeason: true,
+                question: "テキストの「<ruby>季節<rt>きせつ</rt></ruby>の<ruby>移<rt>うつ</rt></ruby>り<ruby>変<rt>か</rt></ruby>わり」で紹介されている「<ruby>秋<rt>あき</rt></ruby>によく<ruby>見<rt>み</rt></ruby>られる<ruby>雲<rt>くも</rt></ruby>」4つの組み合わせはどれでしょう？",
+                choices: [
+                    "すじ<ruby>雲<rt>ぐも</rt></ruby>・うろこ<ruby>雲<rt>ぐも</rt></ruby>・うす<ruby>雲<rt>ぐも</rt></ruby>・ひつじ<ruby>雲<rt>ぐも</rt></ruby>",
+                    "入道<ruby>雲<rt>ぐも</rt></ruby>・かなとこ<ruby>雲<rt>ぐも</rt></ruby>・きり<ruby>雲<rt>ぐも</rt></ruby>・くもり<ruby>雲<rt>ぐも</rt></ruby>",
+                    "雨<ruby>雲<rt>ぐも</rt></ruby>・雪<ruby>雲<rt>ぐも</rt></ruby>・わた<ruby>雲<rt>ぐも</rt></ruby>・かさ<ruby>雲<rt>ぐも</rt></ruby>",
+                    "夜光<ruby>雲<rt>うん</rt></ruby>・真珠母<ruby>雲<rt>うん</rt></ruby>・きのこ<ruby>雲<rt>ぐも</rt></ruby>・レンズ<ruby>雲<rt>ぐも</rt></ruby>"
+                ],
+                answerIndex: 0,
+                explanation: "すじ雲（巻雲）・うろこ雲（巻積雲）・うす雲（巻層雲）・ひつじ雲（高積雲）は「<ruby>秋<rt>あき</rt></ruby>によく<ruby>見<rt>み</rt></ruby>られる<ruby>雲<rt>ぐも</rt></ruby>」です。"
+            },
+            {
+                id: "sci_4_13",
+                round: "ROUND_4",
+                roundLabel: "第4回",
+                unit: "ろうそくの<ruby>燃<rt>も</rt></ruby>え<ruby>方<rt>かた</rt></ruby>",
+                category: "<ruby>季節<rt>きせつ</rt></ruby>の<ruby>移<rt>うつ</rt></ruby>り<ruby>変<rt>か</rt></ruby>わり",
+                isSeason: true,
+                question: "夏から秋にかけて日本に近づく「<ruby>台風<rt>たいふう</rt></ruby>」を上から人工衛星で見ると、雲はどのような向きにうずを巻いているでしょう？",
+                choices: [
+                    "反時計回り（左回り）",
+                    "時計回り（右回り）",
+                    "うずを巻かず真っ直ぐな線になっている",
+                    "四角い格子状になっている"
+                ],
+                answerIndex: 0,
+                explanation: "北半球にある日本の台風は、上から見ると「反時計回り（左回り）」にうずを巻いています。"
+            },
+            {
+                id: "sci_4_14",
+                round: "ROUND_4",
+                roundLabel: "第4回",
+                unit: "ろうそくの<ruby>燃<rt>も</rt></ruby>え<ruby>方<rt>かた</rt></ruby>",
+                category: "ろうそくの<ruby>利用<rt>りよう</rt></ruby>",
+                isSeason: false,
+                question: "ろうそくが身近なところで使われている場面として、テキストで紹介されているものはどれでしょう？",
+                choices: [
+                    "誕生日のケーキ・<ruby>灯籠流<rt>とうろうなが</rt></ruby>し・教会での祈り・仏壇",
+                    "自動車のエンジン・飛行機のジェット燃料",
+                    "スマートフォンのバッテリー・冷蔵庫の冷却",
+                    "新幹線の線路・ビルの鉄骨"
+                ],
+                answerIndex: 0,
+                explanation: "ろうそくは誕生日のケーキや灯籠流し、教会、仏壇、レストランの照明などさまざまな場面で使われています。"
+            },
+            {
+                id: "sci_4_15",
+                round: "ROUND_4",
+                roundLabel: "第4回",
+                unit: "ろうそくの<ruby>燃<rt>も</rt></ruby>え<ruby>方<rt>かた</rt></ruby>",
+                category: "ろうそくの<ruby>炎<rt>ほのお</rt></ruby>",
+                isSeason: false,
+                question: "ろうそくの炎がいつも「上向き」に燃え上がるのはなぜでしょう？",
+                choices: [
+                    "燃えてあたためられた空気が軽くなって<ruby>上昇<rt>じょうしょう</rt></ruby>するから",
+                    "天井から磁石で引っ張られているから",
+                    "ロウが重たくて下へ落ちようとするから",
+                    "糸が上向きにピンと張っているから"
+                ],
+                answerIndex: 0,
+                explanation: "同じかさ（体積）で比べると、あたためられた空気は冷たい空気より軽くなるため上昇気流が起き、炎が上向きに細長くなります。"
+            },
+            {
+                id: "sci_4_16",
+                round: "ROUND_4",
+                roundLabel: "第4回",
+                unit: "ろうそくの<ruby>燃<rt>も</rt></ruby>え<ruby>方<rt>かた</rt></ruby>",
+                category: "<ruby>燃焼<rt>ねんしょう</rt></ruby>のしくみ",
+                isSeason: false,
+                question: "ろうそくの火を吹き消した直後、<ruby>芯<rt>しん</rt></ruby>から立ちのぼる「白いけむり」にマッチの火を近づけると、芯にふれなくても火がつきます。この白いけむりの正体は何でしょう？",
+                choices: [
+                    "冷えて小さなつぶになった「ロウ」",
+                    "ただの水蒸気（水）",
+                    "二酸化炭素の集まり",
+                    "燃え残った灰"
+                ],
+                answerIndex: 0,
+                explanation: "白いけむりは気体だったロウが冷えて小さなつぶに戻ったものなので、火を近づけると再び火がつきます。"
+            },
+            {
+                id: "sci_4_17",
+                round: "ROUND_4",
+                roundLabel: "第4回",
+                unit: "ろうそくの<ruby>燃<rt>も</rt></ruby>え<ruby>方<rt>かた</rt></ruby>",
+                category: "ろうそくの<ruby>炎<rt>ほのお</rt></ruby>",
+                isSeason: false,
+                question: "割りばしをろうそくの炎の中に数秒間入れると、どの部分が最も黒くこげるでしょう？",
+                choices: [
+                    "<ruby>外炎<rt>がいえん</rt></ruby>に当たっていた外側（最も温度が高いから）",
+                    "<ruby>炎心<rt>えんしん</rt></ruby>に当たっていた真ん中",
+                    "まったくこげない",
+                    "炎から離れた持ち手の部分"
+                ],
+                answerIndex: 0,
+                explanation: "最も温度が高い「<ruby>外炎<rt>がいえん</rt></ruby>」に当たっていた外側が最も黒くこげ、<ruby>炎心<rt>えんしん</rt></ruby>の部分はあまりこげません。"
+            },
+            {
+                id: "sci_4_18",
+                round: "ROUND_4",
+                roundLabel: "第4回",
+                unit: "ろうそくの<ruby>燃<rt>も</rt></ruby>え<ruby>方<rt>かた</rt></ruby>",
+                category: "ろうそくの<ruby>炎<rt>ほのお</rt></ruby>",
+                isSeason: false,
+                question: "ガラス管をろうそくの「<ruby>炎心<rt>えんしん</rt></ruby>」に差しこむと、ガラス管の反対側の端から白いけむりが出て火をつけることができます。これは炎心の中に何があるからでしょう？",
+                choices: [
+                    "まだ燃えていない「<ruby>気体<rt>きたい</rt></ruby>のロウ」",
+                    "大量の「酸素」",
+                    "燃え終わった後の「水」",
+                    "とけた「ガラス」"
+                ],
+                answerIndex: 0,
+                explanation: "<ruby>炎心<rt>えんしん</rt></ruby>の中にはまだ燃えていない「気体のロウ」がたまっているため、ガラス管を通して外に取り出すと火がつきます。"
+            },
+            {
+                id: "sci_4_19",
+                round: "ROUND_4",
+                roundLabel: "第4回",
+                unit: "ろうそくの<ruby>燃<rt>も</rt></ruby>え<ruby>方<rt>かた</rt></ruby>",
+                category: "ホタルの<ruby>観察<rt>かんさつ</rt></ruby>",
+                isSeason: false,
+                question: "<ruby>福岡県北九州市<rt>ふくおかけんきたきゅうしゅうし</rt></ruby>の<ruby>黒川<rt>くろかわ</rt></ruby>などで、数千匹ものホタルが見られる時期はいつごろでしょう？",
+                choices: [
+                    "5月終わりごろから6月初めごろ",
+                    "1月終わりごろから2月初めごろ",
+                    "11月終わりごろから12月初めごろ",
+                    "8月のお盆すぎ"
+                ],
+                answerIndex: 0,
+                explanation: "5月終わりごろから6月初めごろにかけて多くのホタルが発光します。"
+            },
+            {
+                id: "sci_4_20",
+                round: "ROUND_4",
+                roundLabel: "第4回",
+                unit: "ろうそくの<ruby>燃<rt>も</rt></ruby>え<ruby>方<rt>かた</rt></ruby>",
+                category: "ろうそくの<ruby>変化<rt>へんか</rt></ruby>",
+                isSeason: false,
+                question: "ろうそくが燃えているとき、芯の根元の部分にできるくぼみにたまっているものは何でしょう？",
+                choices: [
+                    "<ruby>液体<rt>えきたい</rt></ruby>のロウ",
+                    "<ruby>水<rt>みず</rt></ruby>",
+                    "<ruby>油<rt>あぶら</rt></ruby>絵の具",
+                    "とけた<ruby>綿糸<rt>めんし</rt></ruby>"
+                ],
+                answerIndex: 0,
+                explanation: "炎の熱で固体のロウがとけて「<ruby>液体<rt>えきたい</rt></ruby>のロウ」になり、それが芯をしみこんでのぼっていきます。"
+            },
+
+            // ==========================================
+            // 第5回：毛のある動物（20問）p.17〜p.20
+            // ==========================================
+            {
+                id: "sci_5_1",
+                round: "ROUND_5",
+                roundLabel: "第5回",
+                unit: "<ruby>毛<rt>け</rt></ruby>のある<ruby>動物<rt>どうぶつ</rt></ruby>",
+                category: "<ruby>ほ乳類<rt>ほにゅうるい</rt></ruby>の特徴",
+                isSeason: false,
+                question: "昔は「けもの」とも呼ばれていた「<ruby>ほ乳類<rt>ほにゅうるい</rt></ruby>」の大きな特徴として正しいものはどれでしょう？",
+                choices: [
+                    "<ruby>親<rt>おや</rt></ruby>と似たすがたで生まれ、<ruby>母乳<rt>ぼにゅう</rt></ruby>をあたえられて育つ（カモノハシなどをのぞく）",
+                    "すべて卵で生まれ、生まれてすぐ親から離れて1人で育つ",
+                    "一生を必ず水の中で過ごし、えらで呼吸をする",
+                    "体じゅうがすべてかたいウロコでおおわれている"
+                ],
+                answerIndex: 0,
+                explanation: "<ruby>ほ乳類<rt>ほにゅうるい</rt></ruby>はカモノハシやハリモグラなどをのぞいて親と似た姿で生まれ、<ruby>母乳<rt>ぼにゅう</rt></ruby>で育てられます。"
+            },
+            {
+                id: "sci_5_2",
+                round: "ROUND_5",
+                roundLabel: "第5回",
+                unit: "<ruby>毛<rt>け</rt></ruby>のある<ruby>動物<rt>どうぶつ</rt></ruby>",
+                category: "<ruby>毛<rt>け</rt></ruby>がほとんどない<ruby>ほ乳類<rt>ほにゅうるい</rt></ruby>",
+                isSeason: false,
+                question: "体表に<ruby>毛<rt>け</rt></ruby>がほとんどない<ruby>ほ乳類<rt>ほにゅうるい</rt></ruby>として、正しい組み合わせはどれでしょう？",
+                choices: [
+                    "イルカ・クジラ・ゾウ・ハダカデバネズミ・スフィンクス（ネコ）",
+                    "ライオン・トラ・ヒグマ・ジャイアントパンダ・キリン",
+                    "タヌキ・アカギツネ・ニホンザル・イノシシ・テン",
+                    "オオカンガルー・コアラ・カモノハシ・ハリモグラ・ロバ"
+                ],
+                answerIndex: 0,
+                explanation: "水中で生活するイルカ・クジラ・シャチ・ジュゴン・マナティーや、大型のゾウ・サイ、ハダカデバネズミ、ネコの品種のスフィンクスなどは毛がほとんどありません。"
+            },
+            {
+                id: "sci_5_3",
+                round: "ROUND_5",
+                roundLabel: "第5回",
+                unit: "<ruby>毛<rt>け</rt></ruby>のある<ruby>動物<rt>どうぶつ</rt></ruby>",
+                category: "<ruby>ネコ目<rt>ネコもく</rt></ruby>の<ruby>肉球<rt>にくきゅう</rt></ruby>",
+                isSeason: false,
+                question: "<ruby>ネコ目<rt>ネコもく</rt></ruby>（<ruby>食肉目<rt>しょくにくもく</rt></ruby>）の動物の足の裏にあるやわらかいつくり「<ruby>肉球<rt>にくきゅう</rt></ruby>」の役割として正しいものはどれでしょう？",
+                choices: [
+                    "<ruby>足音<rt>あしおと</rt></ruby>を消したり、歩くときの<ruby>衝撃<rt>しょうげき</rt></ruby>をやわらげたりする",
+                    "水の中で魚のように速く泳ぐためのヒレの役割をする",
+                    "木の枝にしっかりと巻きついてぶら下がる役割をする",
+                    "土を深くほって冬眠するためのスコップの役割をする"
+                ],
+                answerIndex: 0,
+                explanation: "イヌ・ネコ・クマ・パンダなどの足の裏には<ruby>肉球<rt>にくきゅう</rt></ruby>があり、足音を消したり衝撃をやわらげたりします。ただし同じネコ目でもアザラシやアシカのようにほとんど歩かない動物には肉球がありません。"
+            },
+            {
+                id: "sci_5_4",
+                round: "ROUND_5",
+                roundLabel: "第5回",
+                unit: "<ruby>毛<rt>け</rt></ruby>のある<ruby>動物<rt>どうぶつ</rt></ruby>",
+                category: "<ruby>草食動物<rt>そうしょくどうぶつ</rt></ruby>",
+                isSeason: false,
+                question: "<ruby>草食動物<rt>そうしょくどうぶつ</rt></ruby>が<ruby>天敵<rt>てんてき</rt></ruby>である<ruby>肉食動物<rt>にくしょくどうぶつ</rt></ruby>から身を守るために適した体のつくりの特徴はどれでしょう？",
+                choices: [
+                    "まわりを広く見わたせるように、<ruby>目<rt>め</rt></ruby>が顔の<ruby>側面<rt>そくめん</rt></ruby>についている",
+                    "獲物との距離を正確にはかるため、目が顔の正面に並んでいる",
+                    "獲物の肉をかみちぎるための鋭い犬歯が大きく発達している",
+                    "足の裏の肉球で足音を消して獲物に忍びよる"
+                ],
+                answerIndex: 0,
+                explanation: "草食動物は<ruby>天敵<rt>てんてき</rt></ruby>を早く見つけやすいように目が顔の<ruby>側面<rt>そくめん</rt></ruby>についており、逃げるのに適したあしの構造をもっています。"
+            },
+            {
+                id: "sci_5_5",
+                round: "ROUND_5",
+                roundLabel: "第5回",
+                unit: "<ruby>毛<rt>け</rt></ruby>のある<ruby>動物<rt>どうぶつ</rt></ruby>",
+                category: "<ruby>身<rt>み</rt></ruby>を<ruby>守<rt>まも</rt></ruby>る<ruby>動物<rt>どうぶつ</rt></ruby>",
+                isSeason: false,
+                question: "敵に<ruby>遭遇<rt>そうぐう</rt></ruby>すると体を丸め、体毛が変化した硬いうろこ（先が刃物のように鋭い）で身を守る動物はどれでしょう？",
+                choices: [
+                    "オオセンザンコウ",
+                    "ラーテル",
+                    "ナミハリネズミ",
+                    "グレビーシマウマ"
+                ],
+                answerIndex: 0,
+                explanation: "オオセンザンコウやオオアルマジロは体を丸めて身を守ります。ラーテルはハチの巣をおそい強い悪臭を放つことで知られ、ハリネズミは体毛が変化したとげで身を守ります。"
+            },
+            {
+                id: "sci_5_6",
+                round: "ROUND_5",
+                roundLabel: "第5回",
+                unit: "<ruby>毛<rt>け</rt></ruby>のある<ruby>動物<rt>どうぶつ</rt></ruby>",
+                category: "<ruby>雑食動物<rt>ざっしょくどうぶつ</rt></ruby>",
+                isSeason: false,
+                question: "動物の肉以外に、木の実や新芽なども食べる「<ruby>雑食動物<rt>ざっしょくどうぶつ</rt></ruby>」のなかまはどれでしょう？",
+                choices: [
+                    "タヌキ・アカギツネ・ツキノワグマ・ニホンザル",
+                    "ライオン・トラ・ヒョウ・チーター",
+                    "キリン・シマウマ・クロサイ・アジアゾウ",
+                    "コアラ・オオカンガルー・ヘラジカ・ロバ"
+                ],
+                answerIndex: 0,
+                explanation: "タヌキ・アカギツネ・ツキノワグマ・テン・アカネズミ・ニホンザルなどは<ruby>雑食動物<rt>ざっしょくどうぶつ</rt></ruby>です。"
+            },
+            {
+                id: "sci_5_7",
+                round: "ROUND_5",
+                roundLabel: "第5回",
+                unit: "<ruby>毛<rt>け</rt></ruby>のある<ruby>動物<rt>どうぶつ</rt></ruby>",
+                category: "<ruby>ほ乳類<rt>ほにゅうるい</rt></ruby>の<ruby>牙<rt>きば</rt></ruby>",
+                isSeason: false,
+                question: "<ruby>北極海<rt>ほっきょくかい</rt></ruby>に生息するクジラのなかまで、長い1本の角のような「<ruby>門歯<rt>もんし</rt></ruby>が発達した牙」をもつ動物はどれでしょう？",
+                choices: [
+                    "イッカク",
+                    "セイウチ",
+                    "スミロドン",
+                    "マッコウクジラ"
+                ],
+                answerIndex: 0,
+                explanation: "イッカクやアフリカゾウは「<ruby>門歯<rt>もんし</rt></ruby>（前歯）」が発達した牙をもち、イノシシ・カバ・セイウチは「<ruby>犬歯<rt>けんし</rt></ruby>」が発達した牙をもっています。"
+            },
+            {
+                id: "sci_5_8",
+                round: "ROUND_5",
+                roundLabel: "第5回",
+                unit: "<ruby>毛<rt>け</rt></ruby>のある<ruby>動物<rt>どうぶつ</rt></ruby>",
+                category: "<ruby>有袋類<rt>ゆうたいるい</rt></ruby>と<ruby>単孔類<rt>たんこうるい</rt></ruby>",
+                isSeason: false,
+                question: "カンガルーやコアラのように、<ruby>未熟<rt>みじゅく</rt></ruby>な状態で生まれた子どもをおなかにある<ruby>袋<rt>ふくろ</rt></ruby>に入れて大切に育てる動物のグループを何というでしょう？",
+                choices: [
+                    "<ruby>有袋類<rt>ゆうたいるい</rt></ruby>",
+                    "<ruby>単孔類<rt>たんこうるい</rt></ruby>",
+                    "<ruby>食肉目<rt>しょくにくもく</rt></ruby>",
+                    "<ruby>両生類<rt>りょうせいるい</rt></ruby>"
+                ],
+                answerIndex: 0,
+                explanation: "おなかの袋で子どもを育てるグループを「<ruby>有袋類<rt>ゆうたいるい</rt></ruby>」といいます。"
+            },
+            {
+                id: "sci_5_9",
+                round: "ROUND_5",
+                roundLabel: "第5回",
+                unit: "<ruby>毛<rt>け</rt></ruby>のある<ruby>動物<rt>どうぶつ</rt></ruby>",
+                category: "<ruby>有袋類<rt>ゆうたいるい</rt></ruby>と<ruby>単孔類<rt>たんこうるい</rt></ruby>",
+                isSeason: false,
+                question: "は虫類や鳥類と同じように「<ruby>殻<rt>から</rt></ruby>のある<ruby>卵<rt>たまご</rt></ruby>」で生まれ、ふ化したあとは<ruby>母乳<rt>ぼにゅう</rt></ruby>をあたえられて育つ、世界でわずか5種しかいないめずらしい「<ruby>単孔類<rt>たんこうるい</rt></ruby>」の動物はどれでしょう？",
+                choices: [
+                    "カモノハシ・ハリモグラ",
+                    "オオカンガルー・コアラ",
+                    "フンボルトペンギン・ネムリブカ",
+                    "ゴマフアザラシ・ミナミハンドウイルカ"
+                ],
+                answerIndex: 0,
+                explanation: "カモノハシやハリモグラは「<ruby>単孔類<rt>たんこうるい</rt></ruby>」とよばれ、卵で産まれるほ乳類です。"
+            },
+            {
+                id: "sci_5_10",
+                round: "ROUND_5",
+                roundLabel: "第5回",
+                unit: "<ruby>毛<rt>け</rt></ruby>のある<ruby>動物<rt>どうぶつ</rt></ruby>",
+                category: "<ruby>動物<rt>どうぶつ</rt></ruby>の<ruby>分類<rt>ぶんるい</rt></ruby>",
+                isSeason: false,
+                question: "次の動物のうち、「<ruby>ほ乳類<rt>ほにゅうるい</rt></ruby>ではない」ものはどれでしょう？",
+                choices: [
+                    "フンボルトペンギン・ネムリブカ（サメの一種）",
+                    "マッコウクジラ・ミナミハンドウイルカ",
+                    "ゴマフアザラシ・カリフォルニアアシカ",
+                    "カモノハシ・ハリモグラ"
+                ],
+                answerIndex: 0,
+                explanation: "フンボルトペンギンは「鳥類」、ネムリブカ（サメ）は「魚類」なのでほ乳類ではありません。"
+            },
+            {
+                id: "sci_5_11",
+                round: "ROUND_5",
+                roundLabel: "第5回",
+                unit: "<ruby>毛<rt>け</rt></ruby>のある<ruby>動物<rt>どうぶつ</rt></ruby>",
+                category: "<ruby>食性<rt>しょくせい</rt></ruby>の変化",
+                isSeason: false,
+                question: "草食動物とされるウサギが昆虫を食べたり、果実を好むゴリラが葉やアリを食べたりすることからわかることは何でしょう？",
+                choices: [
+                    "草食・雑食・肉食の分け方は大まかなもので、生息する<ruby>環境<rt>かんきょう</rt></ruby>の変化によって食べるものも変化する",
+                    "ウサギやゴリラは本当は魚しか食べない肉食動物である",
+                    "すべての動物は生まれたときから一生まったく同じものしか食べない",
+                    "アリは植物の葉の一種である"
+                ],
+                answerIndex: 0,
+                explanation: "草食・雑食・肉食の分け方は大まかなものであり、すんでいる環境や季節によって食べるものも変化します。"
+            },
+            {
+                id: "sci_5_12",
+                round: "ROUND_5",
+                roundLabel: "第5回",
+                unit: "<ruby>毛<rt>け</rt></ruby>のある<ruby>動物<rt>どうぶつ</rt></ruby>",
+                category: "<ruby>肉食動物<rt>にくしょくどうぶつ</rt></ruby>の<ruby>歯<rt>は</rt></ruby>",
+                isSeason: false,
+                question: "ライオンやトラのような肉食動物は、大きな<ruby>犬歯<rt>けんし</rt></ruby>があるためヒトのように前歯をかみ合わせてエサをかめません。ではどのようにして獲物の肉をかみちぎっているでしょう？",
+                choices: [
+                    "頭を横にかたむけ、ハサミのようにかみ合う奥歯（<ruby>裂肉歯<rt>れつにくし</rt></ruby>）を使って肉を切り取る",
+                    "前歯（門歯）ですりつぶしてジュースにしてから飲む",
+                    "舌でとかしてから丸のみする",
+                    "手とナイフのような爪で細かく切り分ける"
+                ],
+                answerIndex: 0,
+                explanation: "肉食動物は大きく鋭い犬歯で獲物をしとめ、上下がハサミのようにかみ合う奥歯（裂肉歯）で肉を切り取って丸のみします。"
+            },
+            {
+                id: "sci_5_13",
+                round: "ROUND_5",
+                roundLabel: "第5回",
+                unit: "<ruby>毛<rt>け</rt></ruby>のある<ruby>動物<rt>どうぶつ</rt></ruby>",
+                category: "<ruby>史上最大<rt>しじょうさいだい</rt></ruby>の<ruby>動物<rt>どうぶつ</rt></ruby>",
+                isSeason: false,
+                question: "体積（重さ）が今までに発見された動物の中で最も大きく、「地球の<ruby>歴史上最大<rt>れきしじょうさいだい</rt></ruby>の動物」とされている動物は何でしょう？",
+                choices: [
+                    "シロナガスクジラ",
+                    "アフリカゾウ",
+                    "マッコウクジラ",
+                    "ホッキョクグマ"
+                ],
+                answerIndex: 0,
+                explanation: "シロナガスクジラは体長30m近く、体重150トン以上にもなり、恐竜などをふくめても地球史上最大の動物とされています。"
+            },
+            {
+                id: "sci_5_14",
+                round: "ROUND_5",
+                roundLabel: "第5回",
+                unit: "<ruby>毛<rt>け</rt></ruby>のある<ruby>動物<rt>どうぶつ</rt></ruby>",
+                category: "<ruby>季節<rt>きせつ</rt></ruby>の<ruby>移<rt>うつ</rt></ruby>り<ruby>変<rt>か</rt></ruby>わり",
+                isSeason: true,
+                question: "テキストの「<ruby>季節<rt>きせつ</rt></ruby>の<ruby>移<rt>うつ</rt></ruby>り<ruby>変<rt>か</rt></ruby>わり」で紹介されている「<ruby>秋<rt>あき</rt></ruby>によく<ruby>見<rt>み</rt></ruby>える<ruby>星座<rt>せいざ</rt></ruby>（星の並び）」4つの正しい組み合わせはどれでしょう？",
+                choices: [
+                    "<ruby>秋<rt>あき</rt></ruby>の<ruby>四辺形<rt>しへんけい</rt></ruby>・カシオペヤ<ruby>座<rt>ざ</rt></ruby>・うお<ruby>座<rt>ざ</rt></ruby>・みなみのうお<ruby>座<rt>ざ</rt></ruby>",
+                    "オリオン<ruby>座<rt>ざ</rt></ruby>・おおいぬ<ruby>座<rt>ざ</rt></ruby>・ふたご<ruby>座<rt>ざ</rt></ruby>・おうし<ruby>座<rt>ざ</rt></ruby>",
+                    "こと<ruby>座<rt>ざ</rt></ruby>・わし<ruby>座<rt>ざ</rt></ruby>・はくちょう<ruby>座<rt>ざ</rt></ruby>・さそり<ruby>座<rt>ざ</rt></ruby>",
+                    "しし<ruby>座<rt>ざ</rt></ruby>・おとめ<ruby>座<rt>ざ</rt></ruby>・うしかい<ruby>座<rt>ざ</rt></ruby>・かに<ruby>座<rt>ざ</rt></ruby>"
+                ],
+                answerIndex: 0,
+                explanation: "<ruby>秋<rt>あき</rt></ruby>の<ruby>四辺形<rt>しへんけい</rt></ruby>（ペガスス座）・カシオペヤ座・うお座・みなみのうお座は「<ruby>秋<rt>あき</rt></ruby>によく<ruby>見<rt>み</rt></ruby>える<ruby>星座<rt>せいざ</rt></ruby>」です。"
+            },
+            {
+                id: "sci_5_15",
+                round: "ROUND_5",
+                roundLabel: "第5回",
+                unit: "<ruby>毛<rt>け</rt></ruby>のある<ruby>動物<rt>どうぶつ</rt></ruby>",
+                category: "<ruby>季節<rt>きせつ</rt></ruby>の<ruby>移<rt>うつ</rt></ruby>り<ruby>変<rt>か</rt></ruby>わり",
+                isSeason: true,
+                question: "テキストの「<ruby>季節<rt>きせつ</rt></ruby>の<ruby>移<rt>うつ</rt></ruby>り<ruby>変<rt>か</rt></ruby>わり」で紹介されている、「<ruby>秋<rt>あき</rt></ruby>に<ruby>高<rt>たか</rt></ruby>い<ruby>位置<rt>いち</rt></ruby>に<ruby>見<rt>み</rt></ruby>える<ruby>月<rt>つき</rt></ruby>」2つはどれでしょう？",
+                choices: [
+                    "<ruby>下弦<rt>かげん</rt></ruby>の<ruby>月<rt>つき</rt></ruby>・26<ruby>日<rt>にち</rt></ruby>の<ruby>月<rt>つき</rt></ruby>",
+                    "<ruby>上弦<rt>じょうげん</rt></ruby>の<ruby>月<rt>つき</rt></ruby>・<ruby>三日月<rt>みかづき</rt></ruby>",
+                    "<ruby>新月<rt>しんげつ</rt></ruby>・<ruby>満月<rt>まんげつ</rt></ruby>",
+                    "十五夜・十三夜"
+                ],
+                answerIndex: 0,
+                explanation: "秋になると夜から明け方にかけて、<ruby>下弦<rt>かげん</rt></ruby>の<ruby>月<rt>つき</rt></ruby>や26<ruby>日<rt>にち</rt></ruby>の<ruby>月<rt>つき</rt></ruby>が空の高い位置に見えます。"
+            },
+            {
+                id: "sci_5_16",
+                round: "ROUND_5",
+                roundLabel: "第5回",
+                unit: "<ruby>毛<rt>け</rt></ruby>のある<ruby>動物<rt>どうぶつ</rt></ruby>",
+                category: "<ruby>過去<rt>かこ</rt></ruby>の<ruby>動物<rt>どうぶつ</rt></ruby>",
+                isSeason: false,
+                question: "過去に生きていた肉食動物で、サーベルタイガーの一種として非常に大きな牙をもっていた動物はどれでしょう？",
+                choices: [
+                    "スミロドン",
+                    "イッカク",
+                    "マンモス",
+                    "ティラノサウルス"
+                ],
+                answerIndex: 0,
+                explanation: "サーベルタイガーの一種である「スミロドン」は、非常に長い犬歯（牙）をもっていました。"
+            },
+            {
+                id: "sci_5_17",
+                round: "ROUND_5",
+                roundLabel: "第5回",
+                unit: "<ruby>毛<rt>け</rt></ruby>のある<ruby>動物<rt>どうぶつ</rt></ruby>",
+                category: "<ruby>ネコ目<rt>ネコもく</rt></ruby>の<ruby>動物<rt>どうぶつ</rt></ruby>",
+                isSeason: false,
+                question: "<ruby>ネコ目<rt>ネコもく</rt></ruby>（<ruby>食肉目<rt>しょくにくもく</rt></ruby>）に分類されるが、肉食ではなく植物などを中心に食べる「雑食」の動物はどれでしょう？",
+                choices: [
+                    "ヒグマ・ジャイアントパンダ",
+                    "ライオン・チーター",
+                    "トラ・ヒョウ",
+                    "タイリクオオカミ・シャチ"
+                ],
+                answerIndex: 0,
+                explanation: "ヒグマやジャイアントパンダは「ネコ目（食肉目）」のなかまですが、植物や木の実なども食べる雑食の動物です。"
+            },
+            {
+                id: "sci_5_18",
+                round: "ROUND_5",
+                roundLabel: "第5回",
+                unit: "<ruby>毛<rt>け</rt></ruby>のある<ruby>動物<rt>どうぶつ</rt></ruby>",
+                category: "<ruby>身<rt>み</rt></ruby>を<ruby>守<rt>まも</rt></ruby>る<ruby>動物<rt>どうぶつ</rt></ruby>",
+                isSeason: false,
+                question: "ハチの巣をおそう動物として知られ、背中のやわらかくしなやかな皮で身を守ったり、危険を感じると強い悪臭を放ったりする動物は何でしょう？",
+                choices: [
+                    "ラーテル",
+                    "オオアルマジロ",
+                    "グレビーシマウマ",
+                    "ヘラジカ"
+                ],
+                answerIndex: 0,
+                explanation: "「ラーテル」は分厚くしなやかな皮膚と強い悪臭で敵から身を守る動物として知られています。"
+            },
+            {
+                id: "sci_5_19",
+                round: "ROUND_5",
+                roundLabel: "第5回",
+                unit: "<ruby>毛<rt>け</rt></ruby>のある<ruby>動物<rt>どうぶつ</rt></ruby>",
+                category: "<ruby>ほ乳類<rt>ほにゅうるい</rt></ruby>の<ruby>牙<rt>きば</rt></ruby>",
+                isSeason: false,
+                question: "イノシシ・カバ・セイウチの牙と、アフリカゾウ・イッカクの牙のちがいとして正しいものはどれでしょう？",
+                choices: [
+                    "イノシシなどは「<ruby>犬歯<rt>けんし</rt></ruby>」が発達した牙で、アフリカゾウなどは「<ruby>門歯<rt>もんし</rt></ruby>」が発達した牙である",
+                    "イノシシなどは「奥歯」が発達した牙で、アフリカゾウなどは「角」である",
+                    "どちらもすべて「骨」が皮膚を突き破って出たものである",
+                    "イノシシはプラスチックの牙で、ゾウは鉄の牙である"
+                ],
+                answerIndex: 0,
+                explanation: "イノシシ・カバ・セイウチは「犬歯」が、アフリカゾウやイッカクは「門歯（前歯）」が大きく発達した牙をもっています。"
+            },
+            {
+                id: "sci_5_20",
+                round: "ROUND_5",
+                roundLabel: "第5回",
+                unit: "<ruby>毛<rt>け</rt></ruby>のある<ruby>動物<rt>どうぶつ</rt></ruby>",
+                category: "<ruby>秋の星座<rt>あきのせいざ</rt></ruby>",
+                isSeason: true,
+                question: "北の空に見え、アルファベットの「W」または「M」の形に星が並んでいる、秋によく見える星座は何でしょう？",
+                choices: [
+                    "カシオペヤ<ruby>座<rt>ざ</rt></ruby>",
+                    "オリオン<ruby>座<rt>ざ</rt></ruby>",
+                    "さそり<ruby>座<rt>ざ</rt></ruby>",
+                    "みなみじゅうじ<ruby>座<rt>ざ</rt></ruby>"
+                ],
+                answerIndex: 0,
+                explanation: "カシオペヤ座はW（またはM）の形をした特徴的な星座で、北極星を見つける目印にもなります。"
+            }
+        ];
+
+        // ==========================================
+        // アプリの状態管理（localStorage連携）
+        // ==========================================
+        const STORAGE_KEY_WRONG = 'science_quiz_1_5_wrong';
+        const STORAGE_KEY_STATS = 'science_quiz_1_5_stats';
+
+        let state = {
+            selectedFilter: "ALL",
+            isReviewMode: false,
+            currentQuestion: null,
+            currentChoices: [],
+            lastQuestionId: null,
+            answeredCount: 0,
+            correctCount: 0,
+            combo: 0,
+            wrongQuestionIds: new Set(),
+            isAnswered: false
+        };
+
+        // localStorageから読み込み
+        function loadSavedState() {
+            try {
+                const rawWrong = localStorage.getItem(STORAGE_KEY_WRONG);
+                if (rawWrong) {
+                    const parsedWrong = JSON.parse(rawWrong);
+                    if (Array.isArray(parsedWrong)) {
+                        const validIds = new Set(quizDatabase.map(q => q.id));
+                        state.wrongQuestionIds = new Set(parsedWrong.filter(id => validIds.has(id)));
+                    }
+                }
+                const rawStats = localStorage.getItem(STORAGE_KEY_STATS);
+                if (rawStats) {
+                    const parsedStats = JSON.parse(rawStats);
+                    if (typeof parsedStats.answeredCount === 'number') state.answeredCount = parsedStats.answeredCount;
+                    if (typeof parsedStats.correctCount === 'number') state.correctCount = parsedStats.correctCount;
+                    if (typeof parsedStats.combo === 'number') state.combo = parsedStats.combo;
+                }
+            } catch (e) {
+                console.warn('保存データの読み込みに失敗しました', e);
+            }
+        }
+
+        // localStorageへ保存
+        function saveState() {
+            try {
+                localStorage.setItem(STORAGE_KEY_WRONG, JSON.stringify(Array.from(state.wrongQuestionIds)));
+                localStorage.setItem(STORAGE_KEY_STATS, JSON.stringify({
+                    answeredCount: state.answeredCount,
+                    correctCount: state.correctCount,
+                    combo: state.combo
+                }));
+            } catch (e) {
+                console.warn('データの保存に失敗しました', e);
+            }
+        }
+
+        // DOM要素の参照
+        const els = {
+            filterSelect: document.getElementById('filter-select'),
+            reviewModeBtn: document.getElementById('review-mode-btn'),
+            reviewBtnText: document.getElementById('review-btn-text'),
+            modeBanner: document.getElementById('mode-banner'),
+            reviewRemaining: document.getElementById('review-remaining'),
+            qRoundBadge: document.getElementById('q-round-badge'),
+            qUnitBadge: document.getElementById('q-unit-badge'),
+            qCategoryBadge: document.getElementById('q-category-badge'),
+            qStreakBadge: document.getElementById('q-streak-badge'),
+            questionText: document.getElementById('question-text'),
+            choicesContainer: document.getElementById('choices-container'),
+            feedbackArea: document.getElementById('feedback-area'),
+            resultIcon: document.getElementById('result-icon'),
+            resultTitle: document.getElementById('result-title'),
+            correctAnswerSub: document.getElementById('correct-answer-sub'),
+            explanationText: document.getElementById('explanation-text'),
+            comboCount: document.getElementById('combo-count'),
+            accuracyRate: document.getElementById('accuracy-rate'),
+            totalAnswered: document.getElementById('total-answered'),
+            resetModal: document.getElementById('reset-modal')
+        };
+
+        // 配列をシャッフルする関数（Fisher-Yates）
+        function shuffleArray(array) {
+            const arr = [...array];
+            for (let i = arr.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [arr[i], arr[j]] = [arr[j], arr[i]];
+            }
+            return arr;
+        }
+
+        // 初期化処理
+        function init() {
+            loadSavedState();
+
+            const allOption = els.filterSelect.querySelector('option[value="ALL"]');
+            if (allOption) {
+                allOption.textContent = `🌟 すべてランダム（全${quizDatabase.length}問）`;
+            }
+
+            els.filterSelect.addEventListener('change', (e) => {
+                state.selectedFilter = e.target.value;
+                if (state.isReviewMode) {
+                    exitReviewMode(false);
+                }
+                nextQuestion();
+            });
+
+            // キーボードショートカット対応
+            document.addEventListener('keydown', (e) => {
+                if (!els.resetModal.classList.contains('hidden')) return;
+
+                if (!state.isAnswered) {
+                    if (['1', '2', '3', '4'].includes(e.key)) {
+                        const idx = parseInt(e.key, 10) - 1;
+                        const buttons = els.choicesContainer.querySelectorAll('button');
+                        if (buttons[idx]) {
+                            buttons[idx].click();
+                        }
+                    }
+                } else {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault();
+                        nextQuestion();
+                    }
+                }
+            });
+
+            updateStatsUI();
+            updateReviewUI();
+            nextQuestion();
+        }
+
+        // 現在のフィルターに応じた出題プールを取得
+        function getQuestionPool() {
+            if (state.isReviewMode) {
+                return quizDatabase.filter(q => state.wrongQuestionIds.has(q.id));
+            }
+            if (state.selectedFilter === "ALL") {
+                return quizDatabase;
+            }
+            if (state.selectedFilter === "SEASON") {
+                return quizDatabase.filter(q => q.isSeason);
+            }
+            return quizDatabase.filter(q => q.round === state.selectedFilter);
+        }
+
+        // 次の問題を出題
+        function nextQuestion() {
+            state.isAnswered = false;
+            els.feedbackArea.classList.add('hidden');
+            els.correctAnswerSub.classList.add('hidden');
+
+            let pool = getQuestionPool();
+
+            // 復習モードで全問クリアした場合
+            if (state.isReviewMode && pool.length === 0) {
+                exitReviewMode(true);
+                return;
+            }
+
+            // 直前と同じ問題が連続しないようにフィルタ
+            if (pool.length > 1 && state.lastQuestionId) {
+                pool = pool.filter(q => q.id !== state.lastQuestionId);
+            }
+
+            // ランダムに1問選択
+            const randomIndex = Math.floor(Math.random() * pool.length);
+            const question = pool[randomIndex];
+            state.currentQuestion = question;
+            state.lastQuestionId = question.id;
+
+            // メタバッジ・問題文を反映
+            els.qRoundBadge.textContent = question.roundLabel;
+            els.qUnitBadge.innerHTML = question.unit;
+            els.qCategoryBadge.innerHTML = question.category;
+            els.questionText.innerHTML = question.question;
+
+            if (state.combo >= 3) {
+                els.qStreakBadge.innerHTML = `🔥 ${state.combo}<ruby>連続<rt>れんぞく</rt></ruby>せいかい！`;
+                els.qStreakBadge.classList.remove('hidden');
+            } else {
+                els.qStreakBadge.classList.add('hidden');
+            }
+
+            // 選択肢をシャッフルして描画（縦幅を抑えたスリムデザイン）
+            const choiceObjs = question.choices.map((htmlStr, idx) => ({
+                html: htmlStr,
+                isCorrect: idx === question.answerIndex
+            }));
+            state.currentChoices = shuffleArray(choiceObjs);
+
+            els.choicesContainer.innerHTML = '';
+            const labels = ['ア', 'イ', 'ウ', 'エ'];
+
+            state.currentChoices.forEach((choiceObj, idx) => {
+                const btn = document.createElement('button');
+                btn.className = "choice-btn w-full text-left bg-slate-50 hover:bg-blue-50 border-2 border-slate-200 hover:border-blue-400 rounded-xl px-2.5 py-2 sm:p-3.5 font-bold text-slate-800 text-[13px] sm:text-base flex items-center gap-2 sm:gap-3 shadow-2xs cursor-pointer";
+                btn.innerHTML = `
+                    <span class="w-6 h-6 sm:w-7 sm:h-7 rounded-full bg-white border border-slate-300 text-blue-600 font-extrabold text-xs sm:text-sm flex items-center justify-center shrink-0">
+                        ${labels[idx]}
+                    </span>
+                    <span class="ruby-choice">${choiceObj.html}</span>
+                `;
+                btn.onclick = () => handleAnswer(idx, btn);
+                els.choicesContainer.appendChild(btn);
+            });
+
+            updateReviewUI();
+
+            // 次の問題に切り替わったら上部へスムーズスクロール
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        // 回答選択時の処理
+        function handleAnswer(selectedIdx, clickedBtn) {
+            if (state.isAnswered) return;
+            state.isAnswered = true;
+
+            const q = state.currentQuestion;
+            const selectedChoiceObj = state.currentChoices[selectedIdx];
+            const isCorrect = selectedChoiceObj.isCorrect;
+            state.answeredCount++;
+
+            const buttons = els.choicesContainer.querySelectorAll('button');
+            buttons.forEach((btn, idx) => {
+                btn.disabled = true;
+                btn.classList.remove('hover:bg-blue-50', 'hover:border-blue-400', 'cursor-pointer');
+                const isThisCorrect = state.currentChoices[idx].isCorrect;
+
+                if (isThisCorrect) {
+                    btn.classList.remove('bg-slate-50', 'border-slate-200');
+                    btn.classList.add('bg-emerald-50', 'border-emerald-500', 'text-emerald-900', 'ring-2', 'ring-emerald-200');
+                    btn.querySelector('span:first-child').classList.add('bg-emerald-500', 'text-white', 'border-emerald-500');
+                } else if (btn === clickedBtn && !isCorrect) {
+                    btn.classList.remove('bg-slate-50', 'border-slate-200');
+                    btn.classList.add('bg-rose-50', 'border-rose-400', 'text-rose-900');
+                    btn.querySelector('span:first-child').classList.add('bg-rose-500', 'text-white', 'border-rose-500');
+                } else {
+                    btn.classList.add('opacity-50');
+                }
+            });
+
+            if (isCorrect) {
+                state.correctCount++;
+                state.combo++;
+                if (state.wrongQuestionIds.has(q.id)) {
+                    state.wrongQuestionIds.delete(q.id);
+                }
+
+                els.resultIcon.textContent = "⭕";
+                els.resultTitle.innerHTML = getPraiseMessage(state.combo);
+                els.resultTitle.className = "text-base sm:text-xl font-extrabold text-emerald-600 ruby-ui";
+
+                if (state.combo > 0 && state.combo % 5 === 0) {
+                    fireConfetti();
+                }
+            } else {
+                state.combo = 0;
+                state.wrongQuestionIds.add(q.id);
+
+                const correctHtml = q.choices[q.answerIndex];
+                els.resultIcon.textContent = "❌";
+                els.resultTitle.textContent = "ざんねん… もうひと息！";
+                els.resultTitle.className = "text-base sm:text-xl font-extrabold text-rose-600";
+                els.correctAnswerSub.innerHTML = `<ruby>正解<rt>せいかい</rt></ruby>は「<span class="text-emerald-700 underline decoration-emerald-400 decoration-2">${correctHtml}</span>」だよ`;
+                els.correctAnswerSub.classList.remove('hidden');
+            }
+
+            els.explanationText.innerHTML = q.explanation;
+            els.feedbackArea.classList.remove('hidden');
+
+            saveState();
+            updateStatsUI();
+            updateReviewUI();
+
+            setTimeout(() => {
+                els.feedbackArea.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+            }, 80);
+        }
+
+        // 連続正解数に応じたほめ言葉
+        function getPraiseMessage(combo) {
+            if (combo >= 10) return `神レベル！${combo}<ruby>連続<rt>れんぞく</rt></ruby>せいかい！！`;
+            if (combo >= 5) return `すごい！${combo}<ruby>連続<rt>れんぞく</rt></ruby>せいかい<ruby>達成<rt>たっせい</rt></ruby>！`;
+            if (combo >= 3) return `<ruby>絶好調<rt>ぜっこうちょう</rt></ruby>！${combo}<ruby>連続<rt>れんぞく</rt></ruby>せいかい！`;
+            return "せいかい！その<ruby>調子<rt>ちょうし</rt></ruby>！";
+        }
+
+        // 紙吹雪エフェクト
+        function fireConfetti() {
+            if (typeof confetti === 'function') {
+                confetti({
+                    particleCount: 65,
+                    spread: 55,
+                    origin: { y: 0.7 }
+                });
+            }
+        }
+
+        // ステータスバーの更新
+        function updateStatsUI() {
+            els.comboCount.textContent = state.combo;
+            els.totalAnswered.textContent = state.answeredCount;
+
+            if (state.answeredCount === 0) {
+                els.accuracyRate.textContent = "--%";
+            } else {
+                const rate = Math.round((state.correctCount / state.answeredCount) * 100);
+                els.accuracyRate.textContent = `${rate}%`;
+            }
+        }
+
+        // 復習ボタン・バナーの表示更新
+        function updateReviewUI() {
+            const count = state.wrongQuestionIds.size;
+            els.reviewBtnText.innerHTML = `<ruby>復習<rt>ふくしゅう</rt></ruby>(${count}問)`;
+            els.reviewModeBtn.disabled = (count === 0 && !state.isReviewMode);
+
+            if (state.isReviewMode) {
+                els.modeBanner.classList.remove('hidden');
+                els.reviewRemaining.textContent = `のこり ${count} 問`;
+                els.reviewModeBtn.classList.add('bg-rose-500', 'text-white', 'border-rose-500');
+                els.reviewModeBtn.classList.remove('bg-white', 'text-rose-600');
+            } else {
+                els.modeBanner.classList.add('hidden');
+                els.reviewModeBtn.classList.remove('bg-rose-500', 'text-white', 'border-rose-500');
+                els.reviewModeBtn.classList.add('bg-white', 'text-rose-600');
+            }
+        }
+
+        // 復習モードの切り替え
+        function toggleReviewMode() {
+            if (state.isReviewMode) {
+                exitReviewMode(true);
+            } else {
+                if (state.wrongQuestionIds.size === 0) return;
+                state.isReviewMode = true;
+                updateReviewUI();
+                nextQuestion();
+            }
+        }
+
+        // 復習モード終了
+        function exitReviewMode(shouldLoadNext = true) {
+            state.isReviewMode = false;
+            updateReviewUI();
+            if (shouldLoadNext) {
+                nextQuestion();
+            }
+        }
+
+        // リセットモーダル制御
+        function resetStats() {
+            els.resetModal.classList.remove('hidden');
+        }
+        function closeResetModal() {
+            els.resetModal.classList.add('hidden');
+        }
+        function confirmReset() {
+            state.answeredCount = 0;
+            state.correctCount = 0;
+            state.combo = 0;
+            state.wrongQuestionIds.clear();
+            state.isReviewMode = false;
+            saveState();
+            closeResetModal();
+            updateStatsUI();
+            updateReviewUI();
+            nextQuestion();
+        }
+
+        // 起動
+        window.addEventListener('DOMContentLoaded', init);
+    </script>
+</body>
+</html>
